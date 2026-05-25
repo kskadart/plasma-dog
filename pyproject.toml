@@ -1,10 +1,12 @@
 [project]
 name = "plasma-dog"
-version = "0.1.0"
+version = "1.0.0"
 description = "Простое кросс-платформенное PyQt-приложение для моих научных коллег: запись видео с камер, сохранение кадров и видео в разных форматах"
 authors = [
     { name = "kskada", email = "kskadart@gmail.com" }
 ]
+license = { file = "LICENSE" }
+license-files = ["LICENSE"]
 requires-python = ">=3.13"
 dependencies = [
     "PyQt6>=6.7.0",
