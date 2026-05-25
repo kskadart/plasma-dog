@@ -10,7 +10,7 @@ from pathlib import Path
 import cv2
 import cv2.utils.logging as cv2_logging
 
-from plasma_eye.camera.properties import default_backend
+from plasma_dog.camera.properties import default_backend
 
 # Диапазон сканирования для платформ без явного списка устройств
 _DARWIN_MAX_INDEX = 3

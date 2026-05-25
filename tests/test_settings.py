@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 from PyQt6.QtCore import QSettings
 
-from plasma_eye.const import (
+from plasma_dog.const import (
     APP_NAME,
     DEFAULT_FPS,
     DEFAULT_HOTKEY,
@@ -18,7 +18,7 @@ from plasma_eye.const import (
     FrameFormat,
     VideoCodec,
 )
-from plasma_eye.settings import AppSettings
+from plasma_dog.settings import AppSettings
 
 
 @pytest.fixture(autouse=True)

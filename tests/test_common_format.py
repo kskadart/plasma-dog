@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from plasma_eye.common.format import human_duration, human_size
+from plasma_dog.common.format import human_duration, human_size
 
 
 @pytest.mark.parametrize(

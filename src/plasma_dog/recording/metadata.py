@@ -7,7 +7,7 @@ from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from pathlib import Path
 
-from plasma_eye.const import FrameFormat
+from plasma_dog.const import FrameFormat
 
 # Имя файла метаданных в session-папке
 METADATA_FILENAME = "metadata.json"

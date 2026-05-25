@@ -5,10 +5,10 @@ import sys
 
 from PyQt6.QtWidgets import QApplication
 
-from plasma_eye.common.logging import setup_logging
-from plasma_eye.const import APP_NAME, ORG_NAME
-from plasma_eye.ui.main_window import MainWindow
-from plasma_eye.ui.style import build_stylesheet
+from plasma_dog.common.logging import setup_logging
+from plasma_dog.const import APP_NAME, ORG_NAME
+from plasma_dog.ui.main_window import MainWindow
+from plasma_dog.ui.style import build_stylesheet
 
 
 def main() -> None:

@@ -21,23 +21,23 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from plasma_eye.camera.capture import CaptureThread
-from plasma_eye.camera.enumerator import CameraInfo, list_cameras
-from plasma_eye.camera.properties import CameraProperty
-from plasma_eye.const import (
+from plasma_dog.camera.capture import CaptureThread
+from plasma_dog.camera.enumerator import CameraInfo, list_cameras
+from plasma_dog.camera.properties import CameraProperty
+from plasma_dog.const import (
     APP_NAME,
     DEFAULT_FOURCC,
     DEFAULT_FPS,
     DEFAULT_HEIGHT,
     DEFAULT_WIDTH,
 )
-from plasma_eye.recording.session import RecordingConfig, RecordingSession
-from plasma_eye.settings import AppSettings
-from plasma_eye.ui.camera_panel import CameraSettingsPanel
-from plasma_eye.ui.controls import RecordingControls
-from plasma_eye.ui.preview import PreviewWidget
-from plasma_eye.ui.settings_dialog import SettingsDialog
-from plasma_eye.ui.status_bar import RecordingStatusBar
+from plasma_dog.recording.session import RecordingConfig, RecordingSession
+from plasma_dog.settings import AppSettings
+from plasma_dog.ui.camera_panel import CameraSettingsPanel
+from plasma_dog.ui.controls import RecordingControls
+from plasma_dog.ui.preview import PreviewWidget
+from plasma_dog.ui.settings_dialog import SettingsDialog
+from plasma_dog.ui.status_bar import RecordingStatusBar
 
 # Стартовая ширина правой панели настроек (только при первом запуске)
 _SETTINGS_PANEL_DEFAULT_WIDTH = 460

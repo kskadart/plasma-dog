@@ -11,7 +11,7 @@ from pathlib import Path
 import cv2
 import numpy as np
 
-from plasma_eye.const import FRAME_SAVER_QUEUE_THRESHOLD, FrameFormat
+from plasma_dog.const import FRAME_SAVER_QUEUE_THRESHOLD, FrameFormat
 
 logger = logging.getLogger(__name__)
 

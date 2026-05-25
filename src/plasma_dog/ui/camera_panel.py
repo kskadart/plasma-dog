@@ -16,14 +16,14 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from plasma_eye.camera.capture import CaptureThread
-from plasma_eye.camera.properties import (
+from plasma_dog.camera.capture import CaptureThread
+from plasma_dog.camera.properties import (
     CameraProperty,
     auto_property_values,
     property_default,
     property_range,
 )
-from plasma_eye.ui.style import FONT_UI, TEXT_MUTED
+from plasma_dog.ui.style import FONT_UI, TEXT_MUTED
 
 # Fallback диапазон для слайдеров параметров без зарегистрированного range.
 # Используется только если property_range(prop) вернёт None для slider-kind.

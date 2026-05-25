@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from plasma_eye.camera.properties import (
+from plasma_dog.camera.properties import (
     CameraProperty,
     auto_property_values,
     property_default,

@@ -9,8 +9,8 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from plasma_eye.const import FRAME_SAVER_QUEUE_THRESHOLD, FrameFormat
-from plasma_eye.recording.frame_saver import FrameSaverPool
+from plasma_dog.const import FRAME_SAVER_QUEUE_THRESHOLD, FrameFormat
+from plasma_dog.recording.frame_saver import FrameSaverPool
 
 
 def _make_frame(value: int = 0) -> np.ndarray:
@@ -114,4 +114,4 @@ def _silence_logging() -> None:
     """Глушение логов в тестах, чтобы dropped warnings не засоряли вывод."""
     import logging
 
-    logging.getLogger("plasma_eye.recording.frame_saver").setLevel(logging.CRITICAL)
+    logging.getLogger("plasma_dog.recording.frame_saver").setLevel(logging.CRITICAL)

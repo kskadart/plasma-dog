@@ -12,17 +12,17 @@ from pathlib import Path
 import numpy as np
 from PyQt6.QtCore import QObject, QTimer, pyqtSignal, pyqtSlot
 
-from plasma_eye.common.path import ensure_dir, session_dir_name
-from plasma_eye.const import (
+from plasma_dog.common.path import ensure_dir, session_dir_name
+from plasma_dog.const import (
     DEFAULT_VIDEO_CODEC,
     FrameFormat,
     VideoCodec,
     codec_extension,
     codec_fourcc,
 )
-from plasma_eye.recording.frame_saver import FrameSaverPool
-from plasma_eye.recording.metadata import RecordingMetadata, write_metadata
-from plasma_eye.recording.video_writer import VideoWriterThread
+from plasma_dog.recording.frame_saver import FrameSaverPool
+from plasma_dog.recording.metadata import RecordingMetadata, write_metadata
+from plasma_dog.recording.video_writer import VideoWriterThread
 
 logger = logging.getLogger(__name__)
 

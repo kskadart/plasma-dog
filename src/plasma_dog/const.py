@@ -1,11 +1,11 @@
-"""Константы приложения plasma-eye."""
+"""Константы приложения plasma-dog."""
 
 from enum import StrEnum
 from pathlib import Path
 
 # Идентификация приложения для QSettings
-APP_NAME = "plasma-eye"
-ORG_NAME = "plasma-eye"
+APP_NAME = "plasma-dog"
+ORG_NAME = "plasma-dog"
 
 # Параметры захвата по умолчанию
 DEFAULT_FPS = 30

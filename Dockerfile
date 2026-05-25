@@ -1,4 +1,4 @@
-# plasma-eye Docker image.
+# plasma-dog Docker image.
 #
 # Назначение:
 #  - CI/build verification на чистом Linux окружении.
@@ -8,7 +8,7 @@
 # Ограничения:
 #  - macOS/Windows: Docker крутится в Linux-VM. Проброс USB-камеры в VM
 #    требует отдельной настройки (usbipd-win / VirtualHere); проще запустить
-#    приложение нативно через `uv run plasma-eye`.
+#    приложение нативно через `uv run plasma-dog`.
 #  - X11: контейнер ожидает доступный X-сервер на хосте. Wayland — через XWayland.
 
 FROM python:3.13-slim-bookworm AS base
@@ -54,4 +54,4 @@ RUN uv sync --frozen --no-dev
 VOLUME ["/data/recordings"]
 
 # Запуск GUI приложения. Требует DISPLAY и подключённую камеру.
-CMD ["uv", "run", "plasma-eye"]
+CMD ["uv", "run", "plasma-dog"]

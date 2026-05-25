@@ -8,8 +8,8 @@ import sys
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
-from plasma_eye.common.path import ensure_dir
-from plasma_eye.const import APP_NAME
+from plasma_dog.common.path import ensure_dir
+from plasma_dog.const import APP_NAME
 
 # Лимиты ротации: 5 MB на файл, 3 архивных файла (итого ~20 MB на диске)
 _LOG_FILE_MAX_BYTES = 5 * 1024 * 1024

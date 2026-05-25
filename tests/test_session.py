@@ -11,9 +11,9 @@ from typing import Any
 import numpy as np
 import pytest
 
-from plasma_eye.const import DEFAULT_VIDEO_CODEC, FrameFormat
-from plasma_eye.recording.metadata import METADATA_FILENAME
-from plasma_eye.recording.session import RecordingConfig, RecordingSession
+from plasma_dog.const import DEFAULT_VIDEO_CODEC, FrameFormat
+from plasma_dog.recording.metadata import METADATA_FILENAME
+from plasma_dog.recording.session import RecordingConfig, RecordingSession
 
 
 def _make_config(tmp_path: Path) -> RecordingConfig:
@@ -47,7 +47,7 @@ def _silence_logging() -> None:
     """Глушение логов в тестах сессии."""
     import logging
 
-    logging.getLogger("plasma_eye.recording").setLevel(logging.CRITICAL)
+    logging.getLogger("plasma_dog.recording").setLevel(logging.CRITICAL)
 
 
 def test_session_creates_session_directory(qtbot, tmp_path: Path) -> None:  # type: ignore[no-untyped-def]
@@ -109,7 +109,7 @@ def test_session_disk_space_warning(
     # 50 MB свободно -> ниже фатального порога 100 MB
     FakeUsage = collections.namedtuple("FakeUsage", ["total", "used", "free"])
     monkeypatch.setattr(
-        "plasma_eye.recording.session.shutil.disk_usage",
+        "plasma_dog.recording.session.shutil.disk_usage",
         lambda _path: FakeUsage(total=1_000_000_000, used=950_000_000, free=50 * 1024 * 1024),
     )
 
