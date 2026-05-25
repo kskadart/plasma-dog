@@ -1,4 +1,4 @@
-"""Кастомные исключения plasma-eye."""
+"""Кастомные исключения plasma-dog."""
 
 
 class PlasmaEyeError(Exception):

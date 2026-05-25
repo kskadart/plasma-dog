@@ -8,7 +8,7 @@ import time
 import cv2
 from PyQt6.QtCore import QMutex, QMutexLocker, QObject, QThread, pyqtSignal
 
-from plasma_eye.camera.properties import (
+from plasma_dog.camera.properties import (
     CameraProperty,
     apply_property,
     default_backend,

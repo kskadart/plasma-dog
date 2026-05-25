@@ -1,5 +1,5 @@
 [project]
-name = "plasma-eye"
+name = "plasma-dog"
 version = "0.1.0"
 description = "Простое кросс-платформенное PyQt-приложение для моих научных коллег: запись видео с камер, сохранение кадров и видео в разных форматах"
 authors = [
@@ -13,7 +13,7 @@ dependencies = [
 ]
 
 [project.scripts]
-plasma-eye = "plasma_eye.main:main"
+plasma-dog = "plasma_dog.main:main"
 
 [dependency-groups]
 dev = [

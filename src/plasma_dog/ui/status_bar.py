@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from PyQt6.QtWidgets import QHBoxLayout, QLabel, QWidget
 
-from plasma_eye.common.format import human_duration, human_size
-from plasma_eye.ui.style import ACCENT_WARNING, FONT_MONO, TEXT_MUTED, TEXT_SECONDARY
+from plasma_dog.common.format import human_duration, human_size
+from plasma_dog.ui.style import ACCENT_WARNING, FONT_MONO, TEXT_MUTED, TEXT_SECONDARY
 
 # Шаблоны лейблов: prefix + значение моноширинным шрифтом
 _LABEL_NAMES = ("Время:", "FPS:", "Кадры:", "Размер:", "Дропы:")

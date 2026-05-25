@@ -11,7 +11,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from plasma_eye.const import DEFAULT_HOTKEY, DEFAULT_TIMER_SECONDS
+from plasma_dog.const import DEFAULT_HOTKEY, DEFAULT_TIMER_SECONDS
 
 # Диапазон значений спинбокса таймера в секундах
 _TIMER_MIN_SECONDS = 1

@@ -6,8 +6,8 @@
 
 from __future__ import annotations
 
-from plasma_eye.camera.enumerator import CameraInfo, _try_open, list_cameras
-from plasma_eye.camera.properties import default_backend
+from plasma_dog.camera.enumerator import CameraInfo, _try_open, list_cameras
+from plasma_dog.camera.properties import default_backend
 
 
 def test_try_open_returns_bool_without_camera() -> None:

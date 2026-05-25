@@ -28,7 +28,7 @@ tests:
 	uv run pytest tests/
 
 run:
-	uv run plasma-eye
+	uv run plasma-dog
 
 all: format lint typecheck tests
 	@echo "Все проверки пройдены."

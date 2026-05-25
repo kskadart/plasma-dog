@@ -1,7 +1,7 @@
 """AppSettings: персистентные настройки приложения поверх QSettings.
 
-Хранение через нативный QSettings — на Linux в ~/.config/plasma-eye/plasma-eye.conf,
-на Windows в реестре HKCU\\Software\\plasma-eye, на macOS в plist. Application/
+Хранение через нативный QSettings — на Linux в ~/.config/plasma-dog/plasma-dog.conf,
+на Windows в реестре HKCU\\Software\\plasma-dog, на macOS в plist. Application/
 Organization name выставляются в main.py до создания AppSettings.
 """
 
@@ -13,7 +13,7 @@ from typing import TypeVar
 
 from PyQt6.QtCore import QSettings
 
-from plasma_eye.const import (
+from plasma_dog.const import (
     DEFAULT_FPS,
     DEFAULT_HOTKEY,
     DEFAULT_JPG_QUALITY,

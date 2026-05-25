@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from plasma_eye.const import (
+from plasma_dog.const import (
     VideoCodec,
     codec_display_name,
     codec_extension,

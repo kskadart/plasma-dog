@@ -24,8 +24,8 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from plasma_eye.const import APP_NAME, FrameFormat, VideoCodec, codec_display_name
-from plasma_eye.settings import AppSettings, default_frame_quality
+from plasma_dog.const import APP_NAME, FrameFormat, VideoCodec, codec_display_name
+from plasma_dog.settings import AppSettings, default_frame_quality
 
 # Диапазоны спинбоксов
 _PNG_MIN_QUALITY = 0

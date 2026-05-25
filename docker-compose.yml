@@ -1,4 +1,4 @@
-# docker-compose для запуска plasma-eye в контейнере на Linux-хосте.
+# docker-compose для запуска plasma-dog в контейнере на Linux-хосте.
 #
 # Использование:
 #   1. На хосте: xhost +local:docker       # разрешить контейнеру доступ к X11
@@ -9,10 +9,10 @@
 # требует дополнительной настройки (см. README). Проще запустить нативно.
 
 services:
-  plasma-eye:
+  plasma-dog:
     build: .
-    image: plasma-eye:local
-    container_name: plasma-eye
+    image: plasma-dog:local
+    container_name: plasma-dog
     # network_mode host даёт прозрачный доступ к X11 socket по unix-пути,
     # никаких портов GUI публиковать не нужно.
     network_mode: host
@@ -25,9 +25,9 @@ services:
       # X11 unix socket для GUI
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
       # Папка с записями: контейнер пишет внутрь, файлы остаются на хосте
-      - ${HOME}/recordings/plasma-eye:/root/recordings/plasma-eye:rw
+      - ${HOME}/recordings/plasma-dog:/root/recordings/plasma-dog:rw
       # Опционально: общая папка для логов
-      - ${HOME}/.local/share/plasma-eye:/root/.local/share/plasma-eye:rw
+      - ${HOME}/.local/share/plasma-dog:/root/.local/share/plasma-dog:rw
     devices:
       # Проброс UVC-камеры. Если камер несколько — добавь /dev/video1, /dev/video2 ...
       - /dev/video0:/dev/video0

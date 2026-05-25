@@ -1,4 +1,4 @@
-# plasma-eye
+# plasma-dog
 
 Desktop-приложение для синхронной записи видео и отдельных кадров плазмы горения с USB UVC-камеры. Целевая аудитория — лабораторные операторы научных экспериментов, которым нужно одновременно получить непрерывный видеопоток для общего обзора и набор PNG-кадров для последующего покадрового анализа.
 
@@ -66,8 +66,8 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 sudo usermod -aG video $USER   # перелогинься после этой команды
 
 # 4. Проект
-git clone <repo-url> plasma-eye
-cd plasma-eye
+git clone <repo-url> plasma-dog
+cd plasma-dog
 make install
 ```
 
@@ -90,8 +90,8 @@ xcode-select --install
 brew install python@3.13 uv git
 
 # 4. Проект
-git clone <repo-url> plasma-eye
-cd plasma-eye
+git clone <repo-url> plasma-dog
+cd plasma-dog
 make install
 ```
 
@@ -121,10 +121,10 @@ winget install Git.Git
 # winget install Microsoft.VCRedist.2015+.x64
 
 # 4. Проект
-git clone <repo-url> plasma-eye
-cd plasma-eye
+git clone <repo-url> plasma-dog
+cd plasma-dog
 uv sync
-uv run plasma-eye
+uv run plasma-dog
 ```
 
 #### Вариант 2: Chocolatey
@@ -139,10 +139,10 @@ choco install git -y
 
 # Перезапусти PowerShell
 
-git clone <repo-url> plasma-eye
-cd plasma-eye
+git clone <repo-url> plasma-dog
+cd plasma-dog
 uv sync
-uv run plasma-eye
+uv run plasma-dog
 ```
 
 #### Вариант 3: Ручная установка (без пакетного менеджера)
@@ -177,10 +177,10 @@ uv run plasma-eye
 
 5. **Проект**:
    ```powershell
-   git clone <repo-url> plasma-eye
-   cd plasma-eye
+   git clone <repo-url> plasma-dog
+   cd plasma-dog
    uv sync
-   uv run plasma-eye
+   uv run plasma-dog
    ```
 
 #### Зависимости Windows — что включено в wheels
@@ -193,14 +193,14 @@ uv run plasma-eye
 
 | Платформа | Команда                          |
 |-----------|----------------------------------|
-| Linux     | `make run` или `uv run plasma-eye` |
-| macOS     | `make run` или `uv run plasma-eye` |
-| Windows   | `uv run plasma-eye`                |
+| Linux     | `make run` или `uv run plasma-dog` |
+| macOS     | `make run` или `uv run plasma-dog` |
+| Windows   | `uv run plasma-dog`                |
 
 Через python-модуль (на любой ОС):
 
 ```
-uv run python -m plasma_eye
+uv run python -m plasma_dog
 ```
 
 ## Доступ к камере по платформам
@@ -234,7 +234,7 @@ uv run python -m plasma_eye
 ```bash
 # 1. Собрать образ
 docker compose build
-# либо: docker build -t plasma-eye:local .
+# либо: docker build -t plasma-dog:local .
 
 # 2. Разрешить X11 локальным docker-контейнерам (на одну сессию)
 xhost +local:docker
@@ -249,8 +249,8 @@ docker compose up
 #   -e DISPLAY=$DISPLAY \
 #   -e QT_X11_NO_MITSHM=1 \
 #   -v /tmp/.X11-unix:/tmp/.X11-unix:rw \
-#   -v $HOME/recordings/plasma-eye:/root/recordings/plasma-eye \
-#   plasma-eye:local
+#   -v $HOME/recordings/plasma-dog:/root/recordings/plasma-dog \
+#   plasma-dog:local
 ```
 
 После остановки откати X11-доступ: `xhost -local:docker`.
@@ -262,7 +262,7 @@ Docker Desktop на macOS/Windows запускает Linux-VM. USB-камера 
 - **Windows**: нужен [usbipd-win](https://github.com/dorssel/usbipd-win) для проброса USB → WSL2 → Docker. Сложно и нестабильно.
 - **macOS**: нет официального решения для USB-passthrough в Docker Desktop. Только сторонние решения (VirtualHere, network-attached USB).
 
-**Рекомендация для macOS/Windows: запускать нативно через `uv run plasma-eye`** — Python + Qt6 + OpenCV отлично работают вне контейнера.
+**Рекомендация для macOS/Windows: запускать нативно через `uv run plasma-dog`** — Python + Qt6 + OpenCV отлично работают вне контейнера.
 
 ### Что внутри Dockerfile
 
@@ -277,7 +277,7 @@ Docker Desktop на macOS/Windows запускает Linux-VM. USB-камера 
 - Автозапуск Settings-диалога с native open-file picker — может вести себя странно через X11.
 - Settings (`QSettings`) пишутся внутри контейнера, не персистятся между запусками если не смонтировать volume. Для постоянного хранения добавь в `docker-compose.yml`:
   ```yaml
-  - ${HOME}/.config/plasma-eye:/root/.config/plasma-eye:rw
+  - ${HOME}/.config/plasma-dog:/root/.config/plasma-dog:rw
   ```
 
 ## Запуск в фоновом / автоматическом режиме
@@ -286,17 +286,17 @@ Docker Desktop на macOS/Windows запускает Linux-VM. USB-камера 
 
 ### Linux (systemd user service)
 
-`~/.config/systemd/user/plasma-eye.service`:
+`~/.config/systemd/user/plasma-dog.service`:
 
 ```ini
 [Unit]
-Description=plasma-eye recording app
+Description=plasma-dog recording app
 After=graphical-session.target
 
 [Service]
 Type=simple
-WorkingDirectory=%h/plasma-eye
-ExecStart=%h/.local/bin/uv run plasma-eye
+WorkingDirectory=%h/plasma-dog
+ExecStart=%h/.local/bin/uv run plasma-dog
 Restart=on-failure
 
 [Install]
@@ -307,28 +307,28 @@ WantedBy=default.target
 
 ```bash
 systemctl --user daemon-reload
-systemctl --user enable --now plasma-eye.service
+systemctl --user enable --now plasma-dog.service
 ```
 
 GUI требует активный X11/Wayland — при логине пользователя сервис стартует автоматически.
 
 ### macOS (LaunchAgent)
 
-`~/Library/LaunchAgents/com.plasma-eye.plist`:
+`~/Library/LaunchAgents/com.plasma-dog.plist`:
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-    <key>Label</key><string>com.plasma-eye</string>
+    <key>Label</key><string>com.plasma-dog</string>
     <key>ProgramArguments</key>
     <array>
         <string>/opt/homebrew/bin/uv</string>
         <string>run</string>
         <string>--project</string>
-        <string>/Users/USERNAME/plasma-eye</string>
-        <string>plasma-eye</string>
+        <string>/Users/USERNAME/plasma-dog</string>
+        <string>plasma-dog</string>
     </array>
     <key>RunAtLoad</key><true/>
     <key>KeepAlive</key><false/>
@@ -336,25 +336,25 @@ GUI требует активный X11/Wayland — при логине поль
 </plist>
 ```
 
-Загрузка: `launchctl load ~/Library/LaunchAgents/com.plasma-eye.plist`.
+Загрузка: `launchctl load ~/Library/LaunchAgents/com.plasma-dog.plist`.
 
 ### Windows (Task Scheduler)
 
 1. Открой `Task Scheduler` (`taskschd.msc`).
-2. `Create Basic Task` → имя `plasma-eye`.
+2. `Create Basic Task` → имя `plasma-dog`.
 3. Trigger: `When I log on`.
 4. Action: `Start a program`:
    - Program/script: `uv.exe` (полный путь, например `C:\Users\USERNAME\.local\bin\uv.exe`)
-   - Arguments: `run plasma-eye`
-   - Start in: `C:\Users\USERNAME\plasma-eye`
+   - Arguments: `run plasma-dog`
+   - Start in: `C:\Users\USERNAME\plasma-dog`
 5. Finish → задача появится в `Task Scheduler Library`.
 
 Альтернатива — добавить ярлык в папку автозагрузки: `Win + R` → `shell:startup` → создать `.bat`-файл:
 
 ```bat
 @echo off
-cd /d C:\Users\USERNAME\plasma-eye
-uv run plasma-eye
+cd /d C:\Users\USERNAME\plasma-dog
+uv run plasma-dog
 ```
 
 ## Использование
@@ -417,9 +417,9 @@ recordings/
 
 | ОС      | Путь                                       |
 |---------|--------------------------------------------|
-| Linux   | `~/.local/share/plasma-eye/log.txt` (или `$XDG_DATA_HOME/plasma-eye/log.txt`) |
-| macOS   | `~/Library/Logs/plasma-eye/log.txt`        |
-| Windows | `%APPDATA%\plasma-eye\log.txt`             |
+| Linux   | `~/.local/share/plasma-dog/log.txt` (или `$XDG_DATA_HOME/plasma-dog/log.txt`) |
+| macOS   | `~/Library/Logs/plasma-dog/log.txt`        |
+| Windows | `%APPDATA%\plasma-dog\log.txt`             |
 
 ## Persistence пользовательских настроек
 
@@ -427,6 +427,6 @@ recordings/
 
 | ОС      | Путь                                                       |
 |---------|------------------------------------------------------------|
-| Linux   | `~/.config/plasma-eye/plasma-eye.conf`                     |
-| macOS   | `~/Library/Preferences/com.plasma-eye.plasma-eye.plist`    |
-| Windows | `HKEY_CURRENT_USER\Software\plasma-eye\plasma-eye`         |
+| Linux   | `~/.config/plasma-dog/plasma-dog.conf`                     |
+| macOS   | `~/Library/Preferences/com.plasma-dog.plasma-dog.plist`    |
+| Windows | `HKEY_CURRENT_USER\Software\plasma-dog\plasma-dog`         |

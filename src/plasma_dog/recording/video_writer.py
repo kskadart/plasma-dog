@@ -10,7 +10,7 @@ import cv2
 import numpy as np
 from PyQt6.QtCore import QObject, QThread, pyqtSignal
 
-from plasma_eye.const import VIDEO_QUEUE_MAXSIZE
+from plasma_dog.const import VIDEO_QUEUE_MAXSIZE
 
 logger = logging.getLogger(__name__)
 

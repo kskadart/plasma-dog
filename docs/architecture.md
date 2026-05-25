@@ -1,4 +1,4 @@
-# Архитектура plasma-eye
+# Архитектура plasma-dog
 
 ## Общий поток данных
 
@@ -50,7 +50,7 @@ sequenceDiagram
 
 ## Модули
 
-`src/plasma_eye/` разделён на функциональные пакеты. Зависимости направленные: `ui -> recording, camera, settings`; `recording -> common, const`; `camera -> properties`; всё остальное — фундаментные модули без обратных импортов.
+`src/plasma_dog/` разделён на функциональные пакеты. Зависимости направленные: `ui -> recording, camera, settings`; `recording -> common, const`; `camera -> properties`; всё остальное — фундаментные модули без обратных импортов.
 
 ```mermaid
 graph TB
@@ -110,9 +110,9 @@ Realtime захват не должен ждать диск. Если диск �
 
 | ОС      | Путь                                                       |
 |---------|------------------------------------------------------------|
-| Linux   | `~/.config/plasma-eye/plasma-eye.conf` (INI)               |
-| macOS   | `~/Library/Preferences/com.plasma-eye.plasma-eye.plist`    |
-| Windows | `HKEY_CURRENT_USER\Software\plasma-eye\plasma-eye` (registry) |
+| Linux   | `~/.config/plasma-dog/plasma-dog.conf` (INI)               |
+| macOS   | `~/Library/Preferences/com.plasma-dog.plasma-dog.plist`    |
+| Windows | `HKEY_CURRENT_USER\Software\plasma-dog\plasma-dog` (registry) |
 
 ## Логирование
 
