@@ -9,9 +9,9 @@ license = { file = "LICENSE" }
 license-files = ["LICENSE"]
 requires-python = ">=3.13"
 dependencies = [
-    "PyQt6>=6.7.0",
-    "opencv-python>=4.10.0",
-    "numpy>=2.0.0",
+    "PyQt6==6.11.0",
+    "opencv-python==4.13.0.92",
+    "numpy==2.4.6",
 ]
 
 [project.scripts]
@@ -19,11 +19,11 @@ plasma-dog = "plasma_dog.main:main"
 
 [dependency-groups]
 dev = [
-    "black>=25.0.0",
-    "ruff>=0.6.0",
-    "mypy>=1.10.0",
-    "pytest>=8.0.0",
-    "pytest-qt>=4.4.0",
+    "black==26.5.1",
+    "ruff==0.15.14",
+    "mypy==2.1.0",
+    "pytest==9.0.3",
+    "pytest-qt==4.5.0",
 ]
 
 [build-system]
