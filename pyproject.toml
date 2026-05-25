@@ -1,0 +1,82 @@
+[project]
+name = "plasma-eye"
+version = "0.1.0"
+description = "Простое кросс-платформенное PyQt-приложение для моих научных коллег: запись видео с камер, сохранение кадров и видео в разных форматах"
+authors = [
+    { name = "kskada", email = "kskadart@gmail.com" }
+]
+requires-python = ">=3.13"
+dependencies = [
+    "PyQt6>=6.7.0",
+    "opencv-python>=4.10.0",
+    "numpy>=2.0.0",
+]
+
+[project.scripts]
+plasma-eye = "plasma_eye.main:main"
+
+[dependency-groups]
+dev = [
+    "black>=25.0.0",
+    "ruff>=0.6.0",
+    "mypy>=1.10.0",
+    "pytest>=8.0.0",
+    "pytest-qt>=4.4.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "B",   # flake8-bugbear
+    "UP",  # pyupgrade
+    "RUF", # ruff-specific
+]
+ignore = [
+    "E501",    # line too long (handled by black)
+    "RUF001",  # ambiguous unicode (нужно для русских docstring)
+    "RUF002",  # ambiguous unicode in docstring (русский текст)
+    "RUF003",  # ambiguous unicode in comment (русский текст)
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["B011"]
+
+[tool.black]
+line-length = 100
+target-version = ["py313"]
+
+[tool.mypy]
+python_version = "3.13"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_any_unimported = false
+no_implicit_optional = true
+check_untyped_defs = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+warn_unreachable = true
+
+[[tool.mypy.overrides]]
+module = ["cv2.*"]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v --tb=short"

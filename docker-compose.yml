@@ -1,0 +1,38 @@
+# docker-compose для запуска plasma-eye в контейнере на Linux-хосте.
+#
+# Использование:
+#   1. На хосте: xhost +local:docker       # разрешить контейнеру доступ к X11
+#   2. docker compose build
+#   3. docker compose up
+#
+# На macOS / Windows Docker крутится в Linux-VM, проброс USB-камеры в VM
+# требует дополнительной настройки (см. README). Проще запустить нативно.
+
+services:
+  plasma-eye:
+    build: .
+    image: plasma-eye:local
+    container_name: plasma-eye
+    # network_mode host даёт прозрачный доступ к X11 socket по unix-пути,
+    # никаких портов GUI публиковать не нужно.
+    network_mode: host
+    environment:
+      - DISPLAY=${DISPLAY:-:0}
+      - QT_X11_NO_MITSHM=1
+      # XDG_RUNTIME_DIR нужен Qt6 на Wayland/XWayland
+      - XDG_RUNTIME_DIR=/tmp
+    volumes:
+      # X11 unix socket для GUI
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      # Папка с записями: контейнер пишет внутрь, файлы остаются на хосте
+      - ${HOME}/recordings/plasma-eye:/root/recordings/plasma-eye:rw
+      # Опционально: общая папка для логов
+      - ${HOME}/.local/share/plasma-eye:/root/.local/share/plasma-eye:rw
+    devices:
+      # Проброс UVC-камеры. Если камер несколько — добавь /dev/video1, /dev/video2 ...
+      - /dev/video0:/dev/video0
+    # Контейнер требует доступа к видео-устройствам (group video на хосте)
+    group_add:
+      - video
+    # Restart on user logout — отключено, приложение GUI запускается интерактивно
+    restart: "no"

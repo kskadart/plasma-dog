@@ -1,0 +1,34 @@
+# Python
+__pycache__/
+*.py[oc]
+*$py.class
+build/
+dist/
+wheels/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Virtual environments
+.venv/
+venv/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Runtime artifacts
+recordings/
+logs/
+*.log
+
+# Local config overrides
+.env
+.env.local
