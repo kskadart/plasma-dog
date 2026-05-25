@@ -430,3 +430,7 @@ recordings/
 | Linux   | `~/.config/plasma-dog/plasma-dog.conf`                     |
 | macOS   | `~/Library/Preferences/com.plasma-dog.plasma-dog.plist`    |
 | Windows | `HKEY_CURRENT_USER\Software\plasma-dog\plasma-dog`         |
+
+## Лицензия
+
+[Apache License 2.0](LICENSE) — permissive лицензия с patent grant. Используется в TensorFlow, Kubernetes и большинстве научных open-source проектов. Можно использовать в коммерческих продуктах и форках, обязательно сохранение copyright/notice при распространении.
