@@ -120,14 +120,22 @@ class FrameSaverPool:
         """Запись одного кадра на диск (выполняется в worker-потоке)."""
         path = self._dir / f"{idx:06d}.{self._fmt.value}"
         try:
-            ok = cv2.imwrite(str(path), frame, self._params)
+            # cv2.imwrite на Windows не открывает пути с не-ASCII символами
+            # (узкий fopen внутри). Кодируем кадр в память и пишем байты через
+            # numpy.tofile, который поддерживает Unicode-пути на всех ОС.
+            ok, buf = cv2.imencode(f".{self._fmt.value}", frame, self._params)
             if not ok:
-                logger.error("cv2.imwrite вернул False для %s", path)
+                logger.error("cv2.imencode вернул False для %s", path)
                 with self._lock:
                     self._dropped += 1
                 return
+            buf.tofile(str(path))
             with self._lock:
                 self._written += 1
+        except OSError as exc:
+            logger.error("Запись кадра %s не удалась: %s", path, exc)
+            with self._lock:
+                self._dropped += 1
         finally:
             with self._lock:
                 self._inflight -= 1
