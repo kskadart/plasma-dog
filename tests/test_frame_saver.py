@@ -6,6 +6,7 @@ import threading
 import time
 from pathlib import Path
 
+import cv2
 import numpy as np
 import pytest
 
@@ -61,6 +62,29 @@ def test_frame_saver_writes_jpg(tmp_path: Path) -> None:
     assert len(files) == 5
     assert [f.name for f in files] == [f"{i:06d}.jpg" for i in range(1, 6)]
     assert pool.written == 5
+
+
+def test_frame_saver_writes_to_non_ascii_path(tmp_path: Path) -> None:
+    """Кадры пишутся в путь с кириллицей (на Windows cv2.imwrite это не умеет).
+
+    Регрессия на запись через imencode+tofile: файлы должны быть созданы и
+    декодироваться обратно в корректное изображение.
+    """
+    out_dir = tmp_path / "Записи_Тест"
+    out_dir.mkdir()
+    pool = FrameSaverPool(output_dir=out_dir, fmt=FrameFormat.PNG, quality=1)
+    for i in range(3):
+        pool.submit(_make_frame(i * 10))
+    pool.shutdown(wait=True)
+
+    files = sorted(out_dir.glob("*.png"))
+    assert [f.name for f in files] == [f"{i:06d}.png" for i in range(1, 4)]
+    assert pool.written == 3
+    assert pool.dropped == 0
+    # чтение Unicode-safe способом (cv2.imread на Windows тоже не умеет не-ASCII)
+    decoded = cv2.imdecode(np.fromfile(files[0], dtype=np.uint8), cv2.IMREAD_COLOR)
+    assert decoded is not None
+    assert decoded.shape == (100, 100, 3)
 
 
 def test_frame_saver_backpressure(tmp_path: Path) -> None:
