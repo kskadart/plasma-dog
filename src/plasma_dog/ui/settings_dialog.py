@@ -8,23 +8,32 @@ from PyQt6.QtCore import QLocale
 from PyQt6.QtGui import QKeySequence
 from PyQt6.QtWidgets import (
     QAbstractSpinBox,
+    QCheckBox,
     QComboBox,
     QDialog,
     QDialogButtonBox,
     QDoubleSpinBox,
     QFileDialog,
     QFormLayout,
+    QGroupBox,
     QHBoxLayout,
     QKeySequenceEdit,
     QLabel,
     QLineEdit,
+    QMessageBox,
     QPushButton,
     QSpinBox,
     QVBoxLayout,
     QWidget,
 )
 
-from plasma_dog.const import APP_NAME, FrameFormat, VideoCodec, codec_display_name
+from plasma_dog.const import (
+    APP_NAME,
+    MIN_FLAME_INFER_HZ,
+    FrameFormat,
+    VideoCodec,
+    codec_display_name,
+)
 from plasma_dog.settings import AppSettings, default_frame_quality
 
 # Диапазоны спинбоксов
@@ -39,6 +48,24 @@ _FPS_MIN = 0.1
 _FPS_MAX = 240.0
 _FPS_STEP = 0.5
 _FPS_DECIMALS = 2
+
+# Жёсткая минимальная высота полей ввода основной формы. QSS задаёт полям
+# min-height + padding, но это формирует лишь мягкий minimumSizeHint: при
+# нехватке вертикального места QFormLayout сжимает строки ниже отрисовываемой
+# высоты полей, и стилизованные фоны наезжают друг на друга. Хард-минимум
+# запрещает такое сжатие (контент 24 + padding 2*4 + бордер 2 = 34).
+_FIELD_MIN_HEIGHT = 34
+
+# Диапазоны секции детектора горения. Пороги показываем оператору в процентах,
+# в QSettings храним как долю 0..1 (конверсия через _PERCENT_SCALE).
+_FLAME_THR_MIN_PERCENT = 0.0
+_FLAME_THR_MAX_PERCENT = 100.0
+_FLAME_THR_DECIMALS = 1
+_FLAME_CONFIRM_MIN = 1
+_FLAME_CONFIRM_MAX = 30
+_FLAME_INFER_HZ_MAX = 30.0
+_FLAME_INFER_DECIMALS = 1
+_PERCENT_SCALE = 100.0
 
 # Подписи поля качества для каждого формата
 _QUALITY_LABEL_PNG = "Уровень сжатия PNG (0=без сжатия, 9=макс):"
@@ -66,8 +93,11 @@ class SettingsDialog(QDialog):
         super().__init__(parent)
         self._settings = settings
         self.setWindowTitle(f"{APP_NAME} — настройки")
-        self.setMinimumSize(640, 480)
-        self.resize(720, 560)
+        # Минимальная/стартовая высота вмещает всю форму без сжатия: контент
+        # требует ~664px (minimumSizeHint), при меньшей высоте QFormLayout
+        # сжимал бы строки и поля наезжали бы друг на друга.
+        self.setMinimumSize(640, 680)
+        self.resize(720, 720)
         # Явный resize-grip в правом нижнем углу: даёт пользователю визуальный
         # хват для изменения размера окна на всех платформах (macOS не показывает
         # grip автоматически для QDialog).
@@ -111,6 +141,31 @@ class SettingsDialog(QDialog):
         self._timer_spin.setRange(_TIMER_MIN_SECONDS, _TIMER_MAX_SECONDS)
         self._timer_spin.setSuffix(" с")
 
+        self._recording_mode_checkbox = QCheckBox("Режим записи")
+        self._mirror_checkbox = QCheckBox("Зеркало камеры")
+
+        # Параметры CV-детектора горения. Пороги в процентах (C-локаль -> точка
+        # как десятичный разделитель), в settings уходят как доля 0..1.
+        self._flame_thr_low_spin = QDoubleSpinBox()
+        self._flame_thr_low_spin.setRange(_FLAME_THR_MIN_PERCENT, _FLAME_THR_MAX_PERCENT)
+        self._flame_thr_low_spin.setDecimals(_FLAME_THR_DECIMALS)
+        self._flame_thr_low_spin.setSuffix(" %")
+        self._flame_thr_low_spin.setLocale(QLocale(QLocale.Language.C))
+
+        self._flame_thr_high_spin = QDoubleSpinBox()
+        self._flame_thr_high_spin.setRange(_FLAME_THR_MIN_PERCENT, _FLAME_THR_MAX_PERCENT)
+        self._flame_thr_high_spin.setDecimals(_FLAME_THR_DECIMALS)
+        self._flame_thr_high_spin.setSuffix(" %")
+        self._flame_thr_high_spin.setLocale(QLocale(QLocale.Language.C))
+
+        self._flame_confirm_spin = QSpinBox()
+        self._flame_confirm_spin.setRange(_FLAME_CONFIRM_MIN, _FLAME_CONFIRM_MAX)
+
+        self._flame_infer_hz_spin = QDoubleSpinBox()
+        self._flame_infer_hz_spin.setRange(MIN_FLAME_INFER_HZ, _FLAME_INFER_HZ_MAX)
+        self._flame_infer_hz_spin.setDecimals(_FLAME_INFER_DECIMALS)
+        self._flame_infer_hz_spin.setLocale(QLocale(QLocale.Language.C))
+
         self._buttons = QDialogButtonBox(
             QDialogButtonBox.StandardButton.Ok
             | QDialogButtonBox.StandardButton.Cancel
@@ -147,11 +202,37 @@ class SettingsDialog(QDialog):
         form.addRow("FPS записи:", self._fps_spin)
         form.addRow("Hotkey:", self._hotkey_edit)
         form.addRow("Таймер (по умолчанию):", self._timer_spin)
+        # Тумблеры-переключатели: собственный текст чекбокса, строка на всю ширину.
+        form.addRow(self._recording_mode_checkbox)
+        form.addRow(self._mirror_checkbox)
+
+        # Хард-минимум высоты полям основной формы (см. _FIELD_MIN_HEIGHT):
+        # запрещает QFormLayout сжимать строки так, что фоны полей наезжают.
+        for field in (
+            self._dir_edit,
+            self._format_combo,
+            self._quality_spin,
+            self._codec_combo,
+            self._fps_spin,
+            self._hotkey_edit,
+            self._timer_spin,
+        ):
+            field.setMinimumHeight(_FIELD_MIN_HEIGHT)
+
+        flame_group = QGroupBox("Детектор горения")
+        flame_form = QFormLayout()
+        flame_form.setSpacing(8)
+        flame_form.addRow("Нижний порог, %:", self._flame_thr_low_spin)
+        flame_form.addRow("Верхний порог, %:", self._flame_thr_high_spin)
+        flame_form.addRow("Кадров подтверждения:", self._flame_confirm_spin)
+        flame_form.addRow("Частота детектора, Гц:", self._flame_infer_hz_spin)
+        flame_group.setLayout(flame_form)
 
         root = QVBoxLayout(self)
         root.setContentsMargins(16, 16, 16, 16)
         root.setSpacing(12)
         root.addLayout(form)
+        root.addWidget(flame_group)
         root.addWidget(self._buttons)
 
     def _connect_signals(self) -> None:
@@ -183,6 +264,13 @@ class SettingsDialog(QDialog):
         self._fps_spin.setValue(self._settings.recording_fps)
         self._hotkey_edit.setKeySequence(QKeySequence(self._settings.hotkey_start_stop))
         self._timer_spin.setValue(self._settings.timer_default_seconds)
+        self._recording_mode_checkbox.setChecked(self._settings.recording_mode_enabled)
+        self._mirror_checkbox.setChecked(self._settings.camera_mirror)
+
+        self._flame_thr_low_spin.setValue(self._settings.flame_blob_thr_low * _PERCENT_SCALE)
+        self._flame_thr_high_spin.setValue(self._settings.flame_blob_thr_high * _PERCENT_SCALE)
+        self._flame_confirm_spin.setValue(self._settings.flame_confirm_frames)
+        self._flame_infer_hz_spin.setValue(self._settings.flame_infer_hz)
 
     def _on_choose_dir(self) -> None:
         """Открытие диалога выбора директории для записей."""
@@ -230,7 +318,21 @@ class SettingsDialog(QDialog):
         return FrameFormat.PNG
 
     def _on_accept(self) -> None:
-        """Запись значений виджетов в AppSettings и закрытие с accept."""
+        """Запись значений виджетов в AppSettings и закрытие с accept.
+
+        Пороги детектора валидируются до записи: нижний порог не может быть выше
+        верхнего. При нарушении показывается предупреждение и диалог не
+        закрывается (ни одно значение не сохраняется).
+        """
+        thr_low_percent = self._flame_thr_low_spin.value()
+        thr_high_percent = self._flame_thr_high_spin.value()
+        if thr_low_percent > thr_high_percent:
+            QMessageBox.warning(
+                self,
+                APP_NAME,
+                "Нижний порог не может быть больше верхнего.",
+            )
+            return
         self._settings.recordings_dir = Path(self._dir_edit.text())
         self._settings.frame_format = self._current_format()
         self._settings.frame_quality = int(self._quality_spin.value())
@@ -238,6 +340,12 @@ class SettingsDialog(QDialog):
         self._settings.recording_fps = float(self._fps_spin.value())
         self._settings.hotkey_start_stop = self._hotkey_edit.keySequence().toString()
         self._settings.timer_default_seconds = int(self._timer_spin.value())
+        self._settings.recording_mode_enabled = self._recording_mode_checkbox.isChecked()
+        self._settings.camera_mirror = self._mirror_checkbox.isChecked()
+        self._settings.flame_blob_thr_low = thr_low_percent / _PERCENT_SCALE
+        self._settings.flame_blob_thr_high = thr_high_percent / _PERCENT_SCALE
+        self._settings.flame_confirm_frames = int(self._flame_confirm_spin.value())
+        self._settings.flame_infer_hz = float(self._flame_infer_hz_spin.value())
         self.accept()
 
     def _current_codec(self) -> VideoCodec:

@@ -58,6 +58,7 @@ class CaptureThread(QThread):
         height: int,
         fps: float,
         fourcc: str = "MJPG",
+        mirror: bool = False,
         parent: QObject | None = None,
     ) -> None:
         super().__init__(parent)
@@ -67,6 +68,7 @@ class CaptureThread(QThread):
         self._fps = fps
         self._fourcc = fourcc
         self._running = False
+        self._mirror = mirror
         self._mutex = QMutex()
         # очередь отложенных применений UVC-параметров (применяются между кадрами)
         self._pending_props: list[tuple[CameraProperty, float]] = []
@@ -118,6 +120,8 @@ class CaptureThread(QThread):
                         return
                     continue
                 consecutive_failures = 0
+                if self._is_mirror():
+                    frame = cv2.flip(frame, 1)
                 self.frame_ready.emit(frame, time.monotonic())
         finally:
             cap.release()
@@ -128,6 +132,17 @@ class CaptureThread(QThread):
         with QMutexLocker(self._mutex):
             self._running = False
         self.wait()
+
+    def set_mirror(self, value: bool) -> None:
+        """Установка флага горизонтального зеркалирования кадра (thread-safe).
+
+        Применяется на лету к следующему прочитанному кадру в run().
+
+        Args:
+            value: True — отражать кадр по горизонтали, False — оставлять как есть.
+        """
+        with QMutexLocker(self._mutex):
+            self._mirror = value
 
     def set_property(self, prop: CameraProperty, value: float) -> None:
         """Постановка UVC-параметра в очередь применения (thread-safe).
@@ -155,6 +170,11 @@ class CaptureThread(QThread):
         """Чтение флага _running под мьютексом."""
         with QMutexLocker(self._mutex):
             return self._running
+
+    def _is_mirror(self) -> bool:
+        """Чтение флага _mirror под мьютексом."""
+        with QMutexLocker(self._mutex):
+            return self._mirror
 
     def _drain_pending_props(self, cap: cv2.VideoCapture) -> None:
         """Применение всех отложенных UVC-параметров к открытому capture.
