@@ -27,3 +27,7 @@ class VideoWriterError(RecordingError):
 
 class FrameSaverError(RecordingError):
     """Не удалось сохранить отдельный кадр."""
+
+
+class CalibrationError(Exception):
+    """Не удалось вычислить пороги детектора по калибровочным выборкам."""

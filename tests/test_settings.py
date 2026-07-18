@@ -9,9 +9,11 @@ from PyQt6.QtCore import QSettings
 
 from plasma_dog.const import (
     APP_NAME,
+    DEFAULT_CAMERA_MIRROR,
     DEFAULT_FPS,
     DEFAULT_HOTKEY,
     DEFAULT_PNG_COMPRESSION,
+    DEFAULT_RECORDING_MODE,
     DEFAULT_RECORDINGS_DIR,
     DEFAULT_TIMER_SECONDS,
     ORG_NAME,
@@ -166,3 +168,39 @@ def test_settings_recording_fps_fractional(qapp) -> None:  # type: ignore[no-unt
     writer.recording_fps = 0.5
     reader = AppSettings()
     assert reader.recording_fps == 0.5
+
+
+def test_settings_camera_mirror_default_is_true(qapp) -> None:  # type: ignore[no-untyped-def]
+    """До любых записей camera_mirror возвращает DEFAULT_CAMERA_MIRROR (True)."""
+    del qapp
+    settings = AppSettings()
+    assert settings.camera_mirror is DEFAULT_CAMERA_MIRROR
+    assert settings.camera_mirror is True
+
+
+def test_settings_camera_mirror_round_trip(qapp) -> None:  # type: ignore[no-untyped-def]
+    """camera_mirror сохраняется и читается новым экземпляром: False -> False, True -> True."""
+    del qapp
+    writer = AppSettings()
+    writer.camera_mirror = False
+    assert AppSettings().camera_mirror is False
+    writer.camera_mirror = True
+    assert AppSettings().camera_mirror is True
+
+
+def test_settings_recording_mode_default_is_true(qapp) -> None:  # type: ignore[no-untyped-def]
+    """До любых записей recording_mode_enabled возвращает DEFAULT_RECORDING_MODE (True)."""
+    del qapp
+    settings = AppSettings()
+    assert settings.recording_mode_enabled is DEFAULT_RECORDING_MODE
+    assert settings.recording_mode_enabled is True
+
+
+def test_settings_recording_mode_round_trip(qapp) -> None:  # type: ignore[no-untyped-def]
+    """recording_mode_enabled сохраняется и читается новым экземпляром: False -> False, True -> True."""
+    del qapp
+    writer = AppSettings()
+    writer.recording_mode_enabled = False
+    assert AppSettings().recording_mode_enabled is False
+    writer.recording_mode_enabled = True
+    assert AppSettings().recording_mode_enabled is True

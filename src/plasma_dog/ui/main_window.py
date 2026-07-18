@@ -5,10 +5,12 @@ from __future__ import annotations
 import time
 from pathlib import Path
 
-from PyQt6.QtCore import Qt, QTimer
+import numpy as np
+from PyQt6.QtCore import Qt, QTimer, pyqtSlot
 from PyQt6.QtGui import QAction, QCloseEvent, QKeySequence, QPixmap, QShortcut
 from PyQt6.QtWidgets import (
     QComboBox,
+    QDialog,
     QFileDialog,
     QHBoxLayout,
     QLabel,
@@ -30,14 +32,20 @@ from plasma_dog.const import (
     DEFAULT_FPS,
     DEFAULT_HEIGHT,
     DEFAULT_WIDTH,
+    MIN_FLAME_INFER_HZ,
+    FlameState,
 )
+from plasma_dog.detection.flame_detector import FlameDetector
 from plasma_dog.recording.session import RecordingConfig, RecordingSession
 from plasma_dog.settings import AppSettings
+from plasma_dog.ui.calibration_dialog import CalibrationDialog
 from plasma_dog.ui.camera_panel import CameraSettingsPanel
 from plasma_dog.ui.controls import RecordingControls
+from plasma_dog.ui.flame_indicator import FlameIndicator
 from plasma_dog.ui.preview import PreviewWidget
 from plasma_dog.ui.settings_dialog import SettingsDialog
 from plasma_dog.ui.status_bar import RecordingStatusBar
+from plasma_dog.ui.style import FONT_MONO, TEXT_SECONDARY
 
 # Стартовая ширина правой панели настроек (только при первом запуске)
 _SETTINGS_PANEL_DEFAULT_WIDTH = 460
@@ -46,9 +54,12 @@ _WINDOW_WIDTH = 1280
 _WINDOW_HEIGHT = 800
 # Фиксированная ширина кнопки выбора папки записей
 _FOLDER_PICKER_BUTTON_WIDTH = 40
-# Подписи кнопки toggle правой панели
-_TOGGLE_PANEL_HIDE = "Скрыть настройки"
-_TOGGLE_PANEL_SHOW = "Показать настройки"
+# Кнопка-тумблер правой UVC-панели: компактная иконка + тултип по состоянию
+# (иконка не меняется, чтобы визуально не путаться с текстовой кнопкой "Настройки").
+_TOGGLE_PANEL_ICON = "🎛"
+_TOGGLE_PANEL_BUTTON_WIDTH = 44
+_TOGGLE_PANEL_TOOLTIP_HIDE = "Скрыть настройки камеры"
+_TOGGLE_PANEL_TOOLTIP_SHOW = "Показать настройки камеры"
 
 
 class MainWindow(QMainWindow):
@@ -68,10 +79,20 @@ class MainWindow(QMainWindow):
         # после первой интроспекции UVC параметров.
         self._pending_camera_snapshot: dict[str, float] | None = None
 
+        # CV-детектор горения и троттлинг его прогона по кадрам превью.
+        self._flame_detector = FlameDetector(
+            thr_low=self._settings.flame_blob_thr_low,
+            thr_high=self._settings.flame_blob_thr_high,
+            confirm_frames=self._settings.flame_confirm_frames,
+        )
+        self._last_infer_at: float | None = None
+        self._infer_interval = 1.0 / max(MIN_FLAME_INFER_HZ, self._settings.flame_infer_hz)
+
         self._preview = PreviewWidget()
         self._camera_selector = QComboBox()
         self._refresh_button = QPushButton("Обновить")
-        self._toggle_panel_button = QPushButton(_TOGGLE_PANEL_HIDE)
+        self._toggle_panel_button = QPushButton(_TOGGLE_PANEL_ICON)
+        self._toggle_panel_button.setFixedWidth(_TOGGLE_PANEL_BUTTON_WIDTH)
         self._recordings_dir_edit = QLineEdit()
         self._recordings_dir_edit.setReadOnly(True)
         self._recordings_dir_pick_button = QPushButton("...")
@@ -96,6 +117,7 @@ class MainWindow(QMainWindow):
 
         self._build_menu()
         self._build_layout()
+        self._apply_recording_mode()
         self._apply_settings_to_widgets()
         self._connect_signals()
         self._install_hotkey()
@@ -134,11 +156,22 @@ class MainWindow(QMainWindow):
 
     def _build_layout(self) -> None:
         """Сборка топбара, секции папки записей, превью, controls и status bar."""
+        self._flame_indicator = FlameIndicator()
+        self._brightness_label = QLabel("Яркость: —")
+        self._brightness_label.setStyleSheet(f"font-family: {FONT_MONO}; color: {TEXT_SECONDARY};")
+        self._calibrate_button = QPushButton("Калибровать")
+        self._calibrate_button.setEnabled(False)
+        self._settings_button = QPushButton("Настройки")
+
         topbar = QHBoxLayout()
         topbar.setSpacing(8)
         topbar.addWidget(QLabel("Камера:"))
         topbar.addWidget(self._camera_selector, stretch=1)
+        topbar.addWidget(self._flame_indicator)
+        topbar.addWidget(self._brightness_label)
+        topbar.addWidget(self._calibrate_button)
         topbar.addWidget(self._refresh_button)
+        topbar.addWidget(self._settings_button)
         topbar.addWidget(self._toggle_panel_button)
 
         folder_row = QHBoxLayout()
@@ -168,14 +201,18 @@ class MainWindow(QMainWindow):
         container.setLayout(root)
         self.setCentralWidget(container)
 
-        # Восстановление видимости панели и подписи кнопки.
+        # Восстановление видимости панели и тултипа кнопки-тумблера.
         visible = self._settings.camera_panel_visible
         self._camera_panel.setVisible(visible)
-        self._toggle_panel_button.setText(_TOGGLE_PANEL_HIDE if visible else _TOGGLE_PANEL_SHOW)
+        self._toggle_panel_button.setToolTip(
+            _TOGGLE_PANEL_TOOLTIP_HIDE if visible else _TOGGLE_PANEL_TOOLTIP_SHOW
+        )
 
     def _connect_signals(self) -> None:
         """Подключение сигналов виджетов и сессии записи."""
         self._refresh_button.clicked.connect(self._refresh_cameras)
+        self._calibrate_button.clicked.connect(self._open_calibration)
+        self._settings_button.clicked.connect(self._open_settings_dialog)
         self._toggle_panel_button.clicked.connect(self._toggle_camera_panel)
         self._splitter.splitterMoved.connect(self._on_splitter_moved)
         self._camera_selector.currentIndexChanged.connect(self._on_camera_selected)
@@ -191,7 +228,9 @@ class MainWindow(QMainWindow):
         """Toggle видимости правой UVC-панели с сохранением состояния в settings."""
         visible = not self._camera_panel.isVisible()
         self._camera_panel.setVisible(visible)
-        self._toggle_panel_button.setText(_TOGGLE_PANEL_HIDE if visible else _TOGGLE_PANEL_SHOW)
+        self._toggle_panel_button.setToolTip(
+            _TOGGLE_PANEL_TOOLTIP_HIDE if visible else _TOGGLE_PANEL_TOOLTIP_SHOW
+        )
         self._settings.camera_panel_visible = visible
 
     def _on_splitter_moved(self, _pos: int, _index: int) -> None:
@@ -263,7 +302,7 @@ class MainWindow(QMainWindow):
         """Открытие модального диалога настроек.
 
         При принятии диалога перечитывает все производные конфиги: RecordingConfig
-        сессии, hotkey, дефолтный таймер.
+        сессии, hotkey, дефолтный таймер, а также параметры CV-детектора горения.
         """
         dialog = SettingsDialog(self._settings, self)
         if dialog.exec() != SettingsDialog.DialogCode.Accepted:
@@ -274,6 +313,23 @@ class MainWindow(QMainWindow):
             self._rebuild_session_config()
         self._apply_settings_to_widgets()
         self._install_hotkey()
+        self._reconfigure_flame_detector()
+        if self._capture is not None:
+            self._capture.set_mirror(self._settings.camera_mirror)
+        self._apply_recording_mode()
+
+    def _apply_recording_mode(self) -> None:
+        """Показ/скрытие UI записи по настройке recording_mode_enabled.
+
+        При выключенном режиме кнопки записи и панель статистики скрываются. Если
+        в момент выключения идёт запись, она сначала останавливается, чтобы не
+        осталась скрытая активная сессия.
+        """
+        enabled = self._settings.recording_mode_enabled
+        if not enabled and self._session.is_recording:
+            self._stop_recording()
+        self._controls.setVisible(enabled)
+        self._status_bar.setVisible(enabled)
 
     def _refresh_cameras(self) -> None:
         """Перечитывание списка камер и обновление combobox."""
@@ -323,9 +379,11 @@ class MainWindow(QMainWindow):
             height=DEFAULT_HEIGHT,
             fps=DEFAULT_FPS,
             fourcc=DEFAULT_FOURCC,
+            mirror=self._settings.camera_mirror,
             parent=self,
         )
         self._capture.frame_ready.connect(self._preview.update_frame)
+        self._capture.frame_ready.connect(self._on_frame_for_detection)
         self._capture.error_occurred.connect(self._on_capture_error)
         self._capture.properties_introspected.connect(self._camera_panel.on_properties_introspected)
         self._capture.properties_introspected.connect(self._apply_pending_snapshot)
@@ -334,6 +392,7 @@ class MainWindow(QMainWindow):
         # Интроспекцию запрашиваем после того как run() стартует и откроет cap.
         self._capture.started_capture.connect(self._on_capture_started)
         self._capture.start()
+        self._calibrate_button.setEnabled(True)
 
     def _on_capture_started(self) -> None:
         """Слот started_capture: запрос интроспекции UVC у текущего capture."""
@@ -368,6 +427,76 @@ class MainWindow(QMainWindow):
         self._preview.setPixmap(QPixmap())
         self._preview.setText(message)
 
+    @pyqtSlot(object, float)
+    def _on_frame_for_detection(self, frame: np.ndarray, timestamp: float) -> None:
+        """Прогон CV-детектора горения по кадру с троттлингом под infer_hz.
+
+        Кадры от камеры приходят на её родной частоте; детектор запускается не
+        чаще infer_hz. Индикатор обновляется только при смене состояния.
+
+        Args:
+            frame: numpy BGR кадр от CaptureThread.
+            timestamp: время кадра (time.monotonic()), используется для троттлинга.
+        """
+        if (
+            self._last_infer_at is not None
+            and timestamp - self._last_infer_at < self._infer_interval
+        ):
+            return
+        self._last_infer_at = timestamp
+        previous = self._flame_detector.state
+        state = self._flame_detector.update(frame)
+        self._brightness_label.setText(
+            f"Яркость: {self._flame_detector.last_fraction * 100.0:.1f} %"
+        )
+        if state != previous:
+            self._flame_indicator.set_state(state)
+
+    def _reconfigure_flame_detector(self) -> None:
+        """Пересоздание детектора горения и троттла из текущих настроек.
+
+        Применяет актуальные значения AppSettings (пороги, кадры подтверждения,
+        частота прогона) к живому потоку кадров без перезапуска приложения.
+        Вызывается после сохранения параметров детектора вручную в диалоге
+        настроек или после калибровки. Индикатор сбрасывается в UNKNOWN.
+        """
+        self._flame_detector = FlameDetector(
+            thr_low=self._settings.flame_blob_thr_low,
+            thr_high=self._settings.flame_blob_thr_high,
+            confirm_frames=self._settings.flame_confirm_frames,
+        )
+        self._infer_interval = 1.0 / max(MIN_FLAME_INFER_HZ, self._settings.flame_infer_hz)
+        self._flame_indicator.set_state(FlameState.UNKNOWN)
+
+    def _open_calibration(self) -> None:
+        """Открытие модального диалога калибровки порогов CV-детектора горения.
+
+        Диалог получает живые кадры камеры через сигнал frame_ready, собирает
+        выборки долей кляксы для состояний "пламя"/"погасло" и вычисляет пороги.
+        При принятии диалога пороги сохраняются в settings, детектор
+        пересоздаётся, а индикатор сбрасывается в UNKNOWN.
+        """
+        if self._capture is None:
+            return
+        dialog = CalibrationDialog(self)
+        self._capture.frame_ready.connect(dialog.add_frame)
+        dialog.exec()
+        if self._capture is not None:
+            try:
+                self._capture.frame_ready.disconnect(dialog.add_frame)
+            except TypeError:
+                # камера могла исчезнуть/переоткрыться во время диалога — допустимо
+                pass
+        if dialog.result() != QDialog.DialogCode.Accepted:
+            return
+        thresholds = dialog.result_thresholds()
+        if thresholds is None:
+            return
+        thr_low, thr_high = thresholds
+        self._settings.flame_blob_thr_low = thr_low
+        self._settings.flame_blob_thr_high = thr_high
+        self._reconfigure_flame_detector()
+
     def _stop_capture(self) -> None:
         """Корректная остановка текущего CaptureThread, если он есть."""
         if self._capture is None:
@@ -376,6 +505,7 @@ class MainWindow(QMainWindow):
             self._stop_recording()
         try:
             self._capture.frame_ready.disconnect(self._preview.update_frame)
+            self._capture.frame_ready.disconnect(self._on_frame_for_detection)
             self._capture.error_occurred.disconnect(self._on_capture_error)
             self._capture.properties_introspected.disconnect(
                 self._camera_panel.on_properties_introspected
@@ -387,6 +517,10 @@ class MainWindow(QMainWindow):
             # отдельные сигналы могли не быть подключены — допустимо
             pass
         self._camera_panel.set_capture(None)
+        self._flame_detector.reset()
+        self._flame_indicator.set_state(FlameState.UNKNOWN)
+        self._brightness_label.setText("Яркость: —")
+        self._calibrate_button.setEnabled(False)
         self._capture.stop()
         self._capture.deleteLater()
         self._capture = None
@@ -417,6 +551,8 @@ class MainWindow(QMainWindow):
         Returns:
             True, если запись успешно начата.
         """
+        if not self._settings.recording_mode_enabled:
+            return False
         if self._session.is_recording:
             return False
         if self._capture is None:

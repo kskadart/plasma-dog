@@ -32,3 +32,6 @@ logs/
 # Local config overrides
 .env
 .env.local
+
+# Datasets (large binaries — keep out of git)
+data/

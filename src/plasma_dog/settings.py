@@ -14,13 +14,25 @@ from typing import TypeVar
 from PyQt6.QtCore import QSettings
 
 from plasma_dog.const import (
+    DEFAULT_CAMERA_MIRROR,
+    DEFAULT_FLAME_BLOB_THR_HIGH,
+    DEFAULT_FLAME_BLOB_THR_LOW,
+    DEFAULT_FLAME_CONFIRM_FRAMES,
+    DEFAULT_FLAME_INFER_HZ,
     DEFAULT_FPS,
     DEFAULT_HOTKEY,
     DEFAULT_JPG_QUALITY,
     DEFAULT_PNG_COMPRESSION,
+    DEFAULT_RECORDING_MODE,
     DEFAULT_RECORDINGS_DIR,
     DEFAULT_TIMER_SECONDS,
     DEFAULT_VIDEO_CODEC,
+    KEY_CAMERA_MIRROR,
+    KEY_FLAME_BLOB_THR_HIGH,
+    KEY_FLAME_BLOB_THR_LOW,
+    KEY_FLAME_CONFIRM_FRAMES,
+    KEY_FLAME_INFER_HZ,
+    KEY_RECORDING_MODE,
     FrameFormat,
     VideoCodec,
 )
@@ -143,6 +155,66 @@ class AppSettings:
     def recording_fps(self, value: float) -> None:
         self._qs.setValue(_KEY_RECORDING_FPS, float(value))
 
+    # ---- flame_blob_thr_low ----
+
+    @property
+    def flame_blob_thr_low(self) -> float:
+        """Нижняя граница доли кляксы для перехода детектора в EXTINGUISHED."""
+        raw = self._qs.value(KEY_FLAME_BLOB_THR_LOW, DEFAULT_FLAME_BLOB_THR_LOW)
+        try:
+            return float(raw)
+        except (TypeError, ValueError):
+            return DEFAULT_FLAME_BLOB_THR_LOW
+
+    @flame_blob_thr_low.setter
+    def flame_blob_thr_low(self, value: float) -> None:
+        self._qs.setValue(KEY_FLAME_BLOB_THR_LOW, float(value))
+
+    # ---- flame_blob_thr_high ----
+
+    @property
+    def flame_blob_thr_high(self) -> float:
+        """Верхняя граница доли кляксы для перехода детектора в BURNING."""
+        raw = self._qs.value(KEY_FLAME_BLOB_THR_HIGH, DEFAULT_FLAME_BLOB_THR_HIGH)
+        try:
+            return float(raw)
+        except (TypeError, ValueError):
+            return DEFAULT_FLAME_BLOB_THR_HIGH
+
+    @flame_blob_thr_high.setter
+    def flame_blob_thr_high(self, value: float) -> None:
+        self._qs.setValue(KEY_FLAME_BLOB_THR_HIGH, float(value))
+
+    # ---- flame_confirm_frames ----
+
+    @property
+    def flame_confirm_frames(self) -> int:
+        """Число подряд идущих кадров для подтверждения смены состояния горелки."""
+        raw = self._qs.value(KEY_FLAME_CONFIRM_FRAMES, DEFAULT_FLAME_CONFIRM_FRAMES)
+        try:
+            return int(raw)
+        except (TypeError, ValueError):
+            return DEFAULT_FLAME_CONFIRM_FRAMES
+
+    @flame_confirm_frames.setter
+    def flame_confirm_frames(self, value: int) -> None:
+        self._qs.setValue(KEY_FLAME_CONFIRM_FRAMES, int(value))
+
+    # ---- flame_infer_hz ----
+
+    @property
+    def flame_infer_hz(self) -> float:
+        """Частота прогона детектора по кадрам превью, кадров в секунду."""
+        raw = self._qs.value(KEY_FLAME_INFER_HZ, DEFAULT_FLAME_INFER_HZ)
+        try:
+            return float(raw)
+        except (TypeError, ValueError):
+            return DEFAULT_FLAME_INFER_HZ
+
+    @flame_infer_hz.setter
+    def flame_infer_hz(self, value: float) -> None:
+        self._qs.setValue(KEY_FLAME_INFER_HZ, float(value))
+
     # ---- hotkey_start_stop ----
 
     @property
@@ -215,6 +287,51 @@ class AppSettings:
             self._qs.remove(_KEY_LAST_CAMERA_INDEX)
             return
         self._qs.setValue(_KEY_LAST_CAMERA_INDEX, int(value))
+
+    # ---- camera_mirror ----
+
+    @property
+    def camera_mirror(self) -> bool:
+        """Горизонтальное зеркалирование кадра камеры (default True).
+
+        QSettings может вернуть bool, строку 'true'/'false' или int (0/1)
+        в зависимости от бэкенда (реестр, plist, INI) — приводим к bool.
+        """
+        raw = self._qs.value(KEY_CAMERA_MIRROR, DEFAULT_CAMERA_MIRROR)
+        if isinstance(raw, bool):
+            return raw
+        if isinstance(raw, str):
+            return raw.lower() in ("true", "1", "yes")
+        if isinstance(raw, int):
+            return bool(raw)
+        return DEFAULT_CAMERA_MIRROR
+
+    @camera_mirror.setter
+    def camera_mirror(self, value: bool) -> None:
+        self._qs.setValue(KEY_CAMERA_MIRROR, bool(value))
+
+    # ---- recording_mode_enabled ----
+
+    @property
+    def recording_mode_enabled(self) -> bool:
+        """Включён ли режим записи (default True: кнопки записи видны).
+
+        При выключении UI записи скрывается, а запуск записи блокируется.
+        QSettings может вернуть bool, строку 'true'/'false' или int (0/1)
+        в зависимости от бэкенда (реестр, plist, INI) — приводим к bool.
+        """
+        raw = self._qs.value(KEY_RECORDING_MODE, DEFAULT_RECORDING_MODE)
+        if isinstance(raw, bool):
+            return raw
+        if isinstance(raw, str):
+            return raw.lower() in ("true", "1", "yes")
+        if isinstance(raw, int):
+            return bool(raw)
+        return DEFAULT_RECORDING_MODE
+
+    @recording_mode_enabled.setter
+    def recording_mode_enabled(self, value: bool) -> None:
+        self._qs.setValue(KEY_RECORDING_MODE, bool(value))
 
     # ---- camera_panel_visible ----
 

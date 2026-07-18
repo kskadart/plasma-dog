@@ -12,11 +12,13 @@ DEFAULT_FPS = 30
 DEFAULT_WIDTH = 1920
 DEFAULT_HEIGHT = 1080
 DEFAULT_FOURCC = "MJPG"  # быстрее YUYV на USB UVC
+DEFAULT_CAMERA_MIRROR = True  # горизонтальное зеркалирование кадра по умолчанию
 
 # Параметры записи
 DEFAULT_RECORDINGS_DIR = Path.home() / "recordings" / APP_NAME
 DEFAULT_TIMER_SECONDS = 60
 DEFAULT_HOTKEY = "Ctrl+R"
+DEFAULT_RECORDING_MODE = True  # режим записи включён по умолчанию (кнопки записи видны)
 
 # PNG compression: 0 (без сжатия, быстро) - 9 (макс. сжатие, медленно)
 DEFAULT_PNG_COMPRESSION = 1
@@ -105,3 +107,31 @@ def codec_display_name(codec: VideoCodec) -> str:
         Локализованная строка для отображения в UI.
     """
     return _CODEC_DISPLAY_NAMES[codec]
+
+
+class FlameState(StrEnum):
+    """Состояние горелки, определённое детектором."""
+
+    BURNING = "burning"  # пламя горит (норма)
+    EXTINGUISHED = "extinguished"  # погасло (нарушение)
+    UNKNOWN = "unknown"
+
+
+# Параметры CV-детектора горения (гистерезис по доле яркой кляксы в кадре)
+DEFAULT_FLAME_BLOB_THR_LOW = 0.27
+DEFAULT_FLAME_BLOB_THR_HIGH = 0.34
+DEFAULT_FLAME_CONFIRM_FRAMES = 3
+DEFAULT_FLAME_INFER_HZ = 2.0
+MIN_FLAME_INFER_HZ = 0.1  # нижняя граница частоты прогона (guard от деления на ноль)
+
+# Ключи QSettings детектора горения
+KEY_FLAME_BLOB_THR_LOW = "detector/blob_thr_low"
+KEY_FLAME_BLOB_THR_HIGH = "detector/blob_thr_high"
+KEY_FLAME_CONFIRM_FRAMES = "detector/confirm_frames"
+KEY_FLAME_INFER_HZ = "detector/infer_hz"
+
+# Ключ QSettings зеркалирования камеры
+KEY_CAMERA_MIRROR = "camera/mirror"
+
+# Ключ QSettings режима записи
+KEY_RECORDING_MODE = "recording/mode_enabled"
