@@ -67,6 +67,22 @@ _FLAME_INFER_HZ_MAX = 30.0
 _FLAME_INFER_DECIMALS = 1
 _PERCENT_SCALE = 100.0
 
+# Диапазоны секции звуковой тревоги. Громкость показываем в процентах (0..100),
+# в QSettings храним как долю 0..1 (конверсия через _PERCENT_SCALE).
+_ALARM_VOLUME_MIN_PERCENT = 0
+_ALARM_VOLUME_MAX_PERCENT = 100
+_ALARM_HEARTBEAT_MIN = 0.2
+_ALARM_HEARTBEAT_MAX = 30.0
+_ALARM_HEARTBEAT_DECIMALS = 1
+_ALARM_ESCALATE_MIN = 1.0
+_ALARM_ESCALATE_MAX = 120.0
+_ALARM_ESCALATE_DECIMALS = 1
+
+# Фильтр диалога выбора аудиофайла тревоги
+_ALARM_AUDIO_FILTER = "Audio (*.wav *.mp3 *.ogg *.m4a)"
+# Подсказка о пустом значении звука тревоги (используется встроенный звук)
+_ALARM_SOUND_PLACEHOLDER = "Пусто — встроенный звук по умолчанию"
+
 # Подписи поля качества для каждого формата
 _QUALITY_LABEL_PNG = "Уровень сжатия PNG (0=без сжатия, 9=макс):"
 _QUALITY_LABEL_JPG = "Качество JPG (1-100):"
@@ -94,10 +110,11 @@ class SettingsDialog(QDialog):
         self._settings = settings
         self.setWindowTitle(f"{APP_NAME} — настройки")
         # Минимальная/стартовая высота вмещает всю форму без сжатия: контент
-        # требует ~664px (minimumSizeHint), при меньшей высоте QFormLayout
-        # сжимал бы строки и поля наезжали бы друг на друга.
-        self.setMinimumSize(640, 680)
-        self.resize(720, 720)
+        # требует ~664px под основную форму и детектор плюс ~200px под секцию
+        # звуковой тревоги, при меньшей высоте QFormLayout сжимал бы строки и
+        # поля наезжали бы друг на друга.
+        self.setMinimumSize(640, 720)
+        self.resize(720, 880)
         # Явный resize-grip в правом нижнем углу: даёт пользователю визуальный
         # хват для изменения размера окна на всех платформах (macOS не показывает
         # grip автоматически для QDialog).
@@ -166,6 +183,31 @@ class SettingsDialog(QDialog):
         self._flame_infer_hz_spin.setDecimals(_FLAME_INFER_DECIMALS)
         self._flame_infer_hz_spin.setLocale(QLocale(QLocale.Language.C))
 
+        # Параметры звуковой тревоги при погасшем пламени.
+        self._alarm_enabled_checkbox = QCheckBox("Тревога включена")
+
+        self._alarm_sound_edit = QLineEdit()
+        self._alarm_sound_edit.setPlaceholderText(_ALARM_SOUND_PLACEHOLDER)
+        self._alarm_sound_button = QPushButton("Выбрать...")
+
+        self._alarm_volume_spin = QSpinBox()
+        self._alarm_volume_spin.setRange(_ALARM_VOLUME_MIN_PERCENT, _ALARM_VOLUME_MAX_PERCENT)
+        self._alarm_volume_spin.setSuffix(" %")
+
+        self._alarm_heartbeat_spin = QDoubleSpinBox()
+        self._alarm_heartbeat_spin.setRange(_ALARM_HEARTBEAT_MIN, _ALARM_HEARTBEAT_MAX)
+        self._alarm_heartbeat_spin.setDecimals(_ALARM_HEARTBEAT_DECIMALS)
+        self._alarm_heartbeat_spin.setSuffix(" с")
+        self._alarm_heartbeat_spin.setLocale(QLocale(QLocale.Language.C))
+
+        self._alarm_escalate_checkbox = QCheckBox("Нарастание громкости")
+
+        self._alarm_escalate_spin = QDoubleSpinBox()
+        self._alarm_escalate_spin.setRange(_ALARM_ESCALATE_MIN, _ALARM_ESCALATE_MAX)
+        self._alarm_escalate_spin.setDecimals(_ALARM_ESCALATE_DECIMALS)
+        self._alarm_escalate_spin.setSuffix(" с")
+        self._alarm_escalate_spin.setLocale(QLocale(QLocale.Language.C))
+
         self._buttons = QDialogButtonBox(
             QDialogButtonBox.StandardButton.Ok
             | QDialogButtonBox.StandardButton.Cancel
@@ -228,16 +270,33 @@ class SettingsDialog(QDialog):
         flame_form.addRow("Частота детектора, Гц:", self._flame_infer_hz_spin)
         flame_group.setLayout(flame_form)
 
+        alarm_group = QGroupBox("Звуковая тревога")
+        alarm_form = QFormLayout()
+        alarm_form.setSpacing(8)
+        alarm_form.addRow(self._alarm_enabled_checkbox)
+        sound_row = QHBoxLayout()
+        sound_row.setSpacing(8)
+        sound_row.addWidget(self._alarm_sound_edit, stretch=1)
+        sound_row.addWidget(self._alarm_sound_button)
+        alarm_form.addRow("Звук:", sound_row)
+        alarm_form.addRow("Громкость, %:", self._alarm_volume_spin)
+        alarm_form.addRow("Интервал повтора, с:", self._alarm_heartbeat_spin)
+        alarm_form.addRow(self._alarm_escalate_checkbox)
+        alarm_form.addRow("Время нарастания до макс, с:", self._alarm_escalate_spin)
+        alarm_group.setLayout(alarm_form)
+
         root = QVBoxLayout(self)
         root.setContentsMargins(16, 16, 16, 16)
         root.setSpacing(12)
         root.addLayout(form)
         root.addWidget(flame_group)
+        root.addWidget(alarm_group)
         root.addWidget(self._buttons)
 
     def _connect_signals(self) -> None:
         """Подключение слотов к виджетам диалога."""
         self._dir_button.clicked.connect(self._on_choose_dir)
+        self._alarm_sound_button.clicked.connect(self._on_choose_sound)
         self._format_combo.currentIndexChanged.connect(self._on_format_changed)
         self._buttons.accepted.connect(self._on_accept)
         self._buttons.rejected.connect(self.reject)
@@ -272,12 +331,26 @@ class SettingsDialog(QDialog):
         self._flame_confirm_spin.setValue(self._settings.flame_confirm_frames)
         self._flame_infer_hz_spin.setValue(self._settings.flame_infer_hz)
 
+        self._alarm_enabled_checkbox.setChecked(self._settings.alarm_enabled)
+        self._alarm_sound_edit.setText(self._settings.alarm_sound_file)
+        self._alarm_volume_spin.setValue(round(self._settings.alarm_volume * _PERCENT_SCALE))
+        self._alarm_heartbeat_spin.setValue(self._settings.alarm_heartbeat_s)
+        self._alarm_escalate_checkbox.setChecked(self._settings.alarm_escalate)
+        self._alarm_escalate_spin.setValue(self._settings.alarm_escalate_s)
+
     def _on_choose_dir(self) -> None:
         """Открытие диалога выбора директории для записей."""
         current = self._dir_edit.text() or str(self._settings.recordings_dir)
         chosen = QFileDialog.getExistingDirectory(self, "Папка записей", current)
         if chosen:
             self._dir_edit.setText(chosen)
+
+    def _on_choose_sound(self) -> None:
+        """Открытие диалога выбора аудиофайла для звука тревоги."""
+        current = self._alarm_sound_edit.text()
+        chosen, _ = QFileDialog.getOpenFileName(self, "Звук тревоги", current, _ALARM_AUDIO_FILTER)
+        if chosen:
+            self._alarm_sound_edit.setText(chosen)
 
     def _on_format_changed(self, _idx: int) -> None:
         """Адаптация диапазона спинбокса качества под выбранный формат."""
@@ -346,6 +419,12 @@ class SettingsDialog(QDialog):
         self._settings.flame_blob_thr_high = thr_high_percent / _PERCENT_SCALE
         self._settings.flame_confirm_frames = int(self._flame_confirm_spin.value())
         self._settings.flame_infer_hz = float(self._flame_infer_hz_spin.value())
+        self._settings.alarm_enabled = self._alarm_enabled_checkbox.isChecked()
+        self._settings.alarm_sound_file = self._alarm_sound_edit.text()
+        self._settings.alarm_volume = self._alarm_volume_spin.value() / _PERCENT_SCALE
+        self._settings.alarm_heartbeat_s = float(self._alarm_heartbeat_spin.value())
+        self._settings.alarm_escalate = self._alarm_escalate_checkbox.isChecked()
+        self._settings.alarm_escalate_s = float(self._alarm_escalate_spin.value())
         self.accept()
 
     def _current_codec(self) -> VideoCodec:

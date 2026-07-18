@@ -14,6 +14,12 @@ from typing import TypeVar
 from PyQt6.QtCore import QSettings
 
 from plasma_dog.const import (
+    DEFAULT_ALARM_ENABLED,
+    DEFAULT_ALARM_ESCALATE,
+    DEFAULT_ALARM_ESCALATE_SECONDS,
+    DEFAULT_ALARM_HEARTBEAT_S,
+    DEFAULT_ALARM_SOUND_FILE,
+    DEFAULT_ALARM_VOLUME,
     DEFAULT_CAMERA_MIRROR,
     DEFAULT_FLAME_BLOB_THR_HIGH,
     DEFAULT_FLAME_BLOB_THR_LOW,
@@ -27,6 +33,12 @@ from plasma_dog.const import (
     DEFAULT_RECORDINGS_DIR,
     DEFAULT_TIMER_SECONDS,
     DEFAULT_VIDEO_CODEC,
+    KEY_ALARM_ENABLED,
+    KEY_ALARM_ESCALATE,
+    KEY_ALARM_ESCALATE_SECONDS,
+    KEY_ALARM_HEARTBEAT,
+    KEY_ALARM_SOUND_FILE,
+    KEY_ALARM_VOLUME,
     KEY_CAMERA_MIRROR,
     KEY_FLAME_BLOB_THR_HIGH,
     KEY_FLAME_BLOB_THR_LOW,
@@ -314,7 +326,7 @@ class AppSettings:
 
     @property
     def recording_mode_enabled(self) -> bool:
-        """Включён ли режим записи (default True: кнопки записи видны).
+        """Включён ли режим записи (default False: кнопки записи скрыты).
 
         При выключении UI записи скрывается, а запуск записи блокируется.
         QSettings может вернуть bool, строку 'true'/'false' или int (0/1)
@@ -332,6 +344,107 @@ class AppSettings:
     @recording_mode_enabled.setter
     def recording_mode_enabled(self, value: bool) -> None:
         self._qs.setValue(KEY_RECORDING_MODE, bool(value))
+
+    # ---- alarm_enabled ----
+
+    @property
+    def alarm_enabled(self) -> bool:
+        """Включена ли звуковая тревога при погасшем пламени (default True).
+
+        QSettings может вернуть bool, строку 'true'/'false' или int (0/1)
+        в зависимости от бэкенда (реестр, plist, INI) — приводим к bool.
+        """
+        raw = self._qs.value(KEY_ALARM_ENABLED, DEFAULT_ALARM_ENABLED)
+        if isinstance(raw, bool):
+            return raw
+        if isinstance(raw, str):
+            return raw.lower() in ("true", "1", "yes")
+        if isinstance(raw, int):
+            return bool(raw)
+        return DEFAULT_ALARM_ENABLED
+
+    @alarm_enabled.setter
+    def alarm_enabled(self, value: bool) -> None:
+        self._qs.setValue(KEY_ALARM_ENABLED, bool(value))
+
+    # ---- alarm_sound_file ----
+
+    @property
+    def alarm_sound_file(self) -> str:
+        """Путь к аудиофайлу тревоги; пусто -> бандл-дефолт."""
+        raw = self._qs.value(KEY_ALARM_SOUND_FILE, DEFAULT_ALARM_SOUND_FILE)
+        return str(raw) if raw is not None else DEFAULT_ALARM_SOUND_FILE
+
+    @alarm_sound_file.setter
+    def alarm_sound_file(self, value: str) -> None:
+        self._qs.setValue(KEY_ALARM_SOUND_FILE, str(value))
+
+    # ---- alarm_volume ----
+
+    @property
+    def alarm_volume(self) -> float:
+        """Базовая громкость тревоги как доля 0..1."""
+        raw = self._qs.value(KEY_ALARM_VOLUME, DEFAULT_ALARM_VOLUME)
+        try:
+            return float(raw)
+        except (TypeError, ValueError):
+            return DEFAULT_ALARM_VOLUME
+
+    @alarm_volume.setter
+    def alarm_volume(self, value: float) -> None:
+        self._qs.setValue(KEY_ALARM_VOLUME, float(value))
+
+    # ---- alarm_heartbeat_s ----
+
+    @property
+    def alarm_heartbeat_s(self) -> float:
+        """Интервал повтора звука тревоги, секунды."""
+        raw = self._qs.value(KEY_ALARM_HEARTBEAT, DEFAULT_ALARM_HEARTBEAT_S)
+        try:
+            return float(raw)
+        except (TypeError, ValueError):
+            return DEFAULT_ALARM_HEARTBEAT_S
+
+    @alarm_heartbeat_s.setter
+    def alarm_heartbeat_s(self, value: float) -> None:
+        self._qs.setValue(KEY_ALARM_HEARTBEAT, float(value))
+
+    # ---- alarm_escalate ----
+
+    @property
+    def alarm_escalate(self) -> bool:
+        """Нарастает ли громкость тревоги до максимума (default True).
+
+        QSettings может вернуть bool, строку 'true'/'false' или int (0/1)
+        в зависимости от бэкенда (реестр, plist, INI) — приводим к bool.
+        """
+        raw = self._qs.value(KEY_ALARM_ESCALATE, DEFAULT_ALARM_ESCALATE)
+        if isinstance(raw, bool):
+            return raw
+        if isinstance(raw, str):
+            return raw.lower() in ("true", "1", "yes")
+        if isinstance(raw, int):
+            return bool(raw)
+        return DEFAULT_ALARM_ESCALATE
+
+    @alarm_escalate.setter
+    def alarm_escalate(self, value: bool) -> None:
+        self._qs.setValue(KEY_ALARM_ESCALATE, bool(value))
+
+    # ---- alarm_escalate_s ----
+
+    @property
+    def alarm_escalate_s(self) -> float:
+        """Время нарастания громкости тревоги до максимума, секунды."""
+        raw = self._qs.value(KEY_ALARM_ESCALATE_SECONDS, DEFAULT_ALARM_ESCALATE_SECONDS)
+        try:
+            return float(raw)
+        except (TypeError, ValueError):
+            return DEFAULT_ALARM_ESCALATE_SECONDS
+
+    @alarm_escalate_s.setter
+    def alarm_escalate_s(self, value: float) -> None:
+        self._qs.setValue(KEY_ALARM_ESCALATE_SECONDS, float(value))
 
     # ---- camera_panel_visible ----
 

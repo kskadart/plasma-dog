@@ -18,7 +18,7 @@ DEFAULT_CAMERA_MIRROR = True  # горизонтальное зеркалиро�
 DEFAULT_RECORDINGS_DIR = Path.home() / "recordings" / APP_NAME
 DEFAULT_TIMER_SECONDS = 60
 DEFAULT_HOTKEY = "Ctrl+R"
-DEFAULT_RECORDING_MODE = True  # режим записи включён по умолчанию (кнопки записи видны)
+DEFAULT_RECORDING_MODE = False  # режим записи выключен по умолчанию (кнопки записи скрыты)
 
 # PNG compression: 0 (без сжатия, быстро) - 9 (макс. сжатие, медленно)
 DEFAULT_PNG_COMPRESSION = 1
@@ -135,3 +135,19 @@ KEY_CAMERA_MIRROR = "camera/mirror"
 
 # Ключ QSettings режима записи
 KEY_RECORDING_MODE = "recording/mode_enabled"
+
+# Параметры звуковой тревоги при погасшем пламени
+DEFAULT_ALARM_ENABLED = True
+DEFAULT_ALARM_SOUND_FILE = ""  # пусто -> бандл-дефолт resources/alarm_default.wav
+DEFAULT_ALARM_VOLUME = 0.7  # базовая громкость, доля 0..1
+DEFAULT_ALARM_HEARTBEAT_S = 5.0  # интервал повтора звука, с
+DEFAULT_ALARM_ESCALATE = True  # нарастание громкости до максимума
+DEFAULT_ALARM_ESCALATE_SECONDS = 20.0  # время нарастания до максимума, с
+
+# Ключи QSettings звуковой тревоги
+KEY_ALARM_ENABLED = "alarm/enabled"
+KEY_ALARM_SOUND_FILE = "alarm/sound_file"
+KEY_ALARM_VOLUME = "alarm/volume"
+KEY_ALARM_HEARTBEAT = "alarm/heartbeat_s"
+KEY_ALARM_ESCALATE = "alarm/escalate"
+KEY_ALARM_ESCALATE_SECONDS = "alarm/escalate_s"
