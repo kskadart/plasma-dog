@@ -112,3 +112,46 @@ def test_recording_mode_checkbox_loads_and_saves_value(qapp) -> None:  # type: i
     dialog._on_accept()
 
     assert AppSettings().recording_mode_enabled is True
+
+
+def test_alarm_section_loads_values_from_settings(qapp) -> None:  # type: ignore[no-untyped-def]
+    """Секция тревоги грузит значения из настроек, громкость доля -> проценты."""
+    del qapp
+    settings = AppSettings()
+    settings.alarm_enabled = False
+    settings.alarm_sound_file = "/tmp/my_alarm.wav"
+    settings.alarm_volume = 0.55
+    settings.alarm_heartbeat_s = 4.0
+    settings.alarm_escalate = False
+    settings.alarm_escalate_s = 30.0
+
+    dialog = SettingsDialog(settings)
+    assert dialog._alarm_enabled_checkbox.isChecked() is False
+    assert dialog._alarm_sound_edit.text() == "/tmp/my_alarm.wav"
+    assert dialog._alarm_volume_spin.value() == 55  # 0.55 * 100
+    assert dialog._alarm_heartbeat_spin.value() == pytest.approx(4.0)
+    assert dialog._alarm_escalate_checkbox.isChecked() is False
+    assert dialog._alarm_escalate_spin.value() == pytest.approx(30.0)
+
+
+def test_alarm_section_saves_values_to_settings(qapp) -> None:  # type: ignore[no-untyped-def]
+    """Секция тревоги сохраняет значения при accept, громкость проценты -> доля."""
+    del qapp
+    settings = AppSettings()
+    dialog = SettingsDialog(settings)
+
+    dialog._alarm_enabled_checkbox.setChecked(False)
+    dialog._alarm_sound_edit.setText("/tmp/siren.wav")
+    dialog._alarm_volume_spin.setValue(30)
+    dialog._alarm_heartbeat_spin.setValue(5.0)
+    dialog._alarm_escalate_checkbox.setChecked(True)
+    dialog._alarm_escalate_spin.setValue(60.0)
+    dialog._on_accept()
+
+    reader = AppSettings()
+    assert reader.alarm_enabled is False
+    assert reader.alarm_sound_file == "/tmp/siren.wav"
+    assert reader.alarm_volume == pytest.approx(0.30)  # 30 % -> доля
+    assert reader.alarm_heartbeat_s == pytest.approx(5.0)
+    assert reader.alarm_escalate is True
+    assert reader.alarm_escalate_s == pytest.approx(60.0)

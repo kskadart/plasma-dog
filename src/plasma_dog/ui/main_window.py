@@ -23,6 +23,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from plasma_dog.alarm.flame_alarm import FlameAlarm
 from plasma_dog.camera.capture import CaptureThread
 from plasma_dog.camera.enumerator import CameraInfo, list_cameras
 from plasma_dog.camera.properties import CameraProperty
@@ -45,7 +46,7 @@ from plasma_dog.ui.flame_indicator import FlameIndicator
 from plasma_dog.ui.preview import PreviewWidget
 from plasma_dog.ui.settings_dialog import SettingsDialog
 from plasma_dog.ui.status_bar import RecordingStatusBar
-from plasma_dog.ui.style import FONT_MONO, TEXT_SECONDARY
+from plasma_dog.ui.style import ACCENT_READY, ACCENT_WARNING, FONT_MONO, TEXT_SECONDARY
 
 # Стартовая ширина правой панели настроек (только при первом запуске)
 _SETTINGS_PANEL_DEFAULT_WIDTH = 460
@@ -87,6 +88,10 @@ class MainWindow(QMainWindow):
         )
         self._last_infer_at: float | None = None
         self._infer_interval = 1.0 / max(MIN_FLAME_INFER_HZ, self._settings.flame_infer_hz)
+
+        # Звуковая тревога при погасшем пламени; начальная конфигурация из settings.
+        self._flame_alarm = FlameAlarm(self)
+        self._reconfigure_flame_alarm()
 
         self._preview = PreviewWidget()
         self._camera_selector = QComboBox()
@@ -159,6 +164,9 @@ class MainWindow(QMainWindow):
         self._flame_indicator = FlameIndicator()
         self._brightness_label = QLabel("Яркость: —")
         self._brightness_label.setStyleSheet(f"font-family: {FONT_MONO}; color: {TEXT_SECONDARY};")
+        self._alarm_toggle_button = QPushButton()
+        self._alarm_toggle_button.setCheckable(True)
+        self._alarm_toggle_button.setChecked(self._settings.alarm_enabled)
         self._calibrate_button = QPushButton("Калибровать")
         self._calibrate_button.setEnabled(False)
         self._settings_button = QPushButton("Настройки")
@@ -169,6 +177,7 @@ class MainWindow(QMainWindow):
         topbar.addWidget(self._camera_selector, stretch=1)
         topbar.addWidget(self._flame_indicator)
         topbar.addWidget(self._brightness_label)
+        topbar.addWidget(self._alarm_toggle_button)
         topbar.addWidget(self._calibrate_button)
         topbar.addWidget(self._refresh_button)
         topbar.addWidget(self._settings_button)
@@ -207,6 +216,7 @@ class MainWindow(QMainWindow):
         self._toggle_panel_button.setToolTip(
             _TOGGLE_PANEL_TOOLTIP_HIDE if visible else _TOGGLE_PANEL_TOOLTIP_SHOW
         )
+        self._update_alarm_button()
 
     def _connect_signals(self) -> None:
         """Подключение сигналов виджетов и сессии записи."""
@@ -214,6 +224,7 @@ class MainWindow(QMainWindow):
         self._calibrate_button.clicked.connect(self._open_calibration)
         self._settings_button.clicked.connect(self._open_settings_dialog)
         self._toggle_panel_button.clicked.connect(self._toggle_camera_panel)
+        self._alarm_toggle_button.toggled.connect(self._on_alarm_toggled)
         self._splitter.splitterMoved.connect(self._on_splitter_moved)
         self._camera_selector.currentIndexChanged.connect(self._on_camera_selected)
         self._recordings_dir_pick_button.clicked.connect(self._pick_recordings_dir)
@@ -236,6 +247,34 @@ class MainWindow(QMainWindow):
     def _on_splitter_moved(self, _pos: int, _index: int) -> None:
         """Сохранение размеров splitter при ручном изменении пользователем."""
         self._settings.splitter_sizes = self._splitter.sizes()
+
+    def _update_alarm_button(self) -> None:
+        """Синхронизация текста и цвета кнопки тревоги с её состоянием.
+
+        Включено -> зелёный текст "Тревога: ВКЛ", выключено -> янтарный
+        "Тревога: ВЫКЛ" (моно-шрифт по образцу индикатора яркости).
+        """
+        enabled = self._alarm_toggle_button.isChecked()
+        text = "Тревога: ВКЛ" if enabled else "Тревога: ВЫКЛ"
+        color = ACCENT_READY if enabled else ACCENT_WARNING
+        self._alarm_toggle_button.setText(text)
+        self._alarm_toggle_button.setStyleSheet(f"font-family: {FONT_MONO}; color: {color};")
+
+    def _on_alarm_toggled(self, checked: bool) -> None:
+        """Тумблер тревоги: запись настройки, заглушение при выключении и
+        повторный подъём тревоги при включении, если пламя уже погасло.
+
+        Args:
+            checked: новое состояние кнопки (True -> тревога включена).
+        """
+        self._settings.alarm_enabled = checked
+        if not checked:
+            self._flame_alarm.stop()
+        elif self._flame_detector.state is FlameState.EXTINGUISHED:
+            # повторное включение при уже погасшем пламени -> сразу поднять тревогу:
+            # старт по смене состояния не сработает, т.к. состояние не менялось
+            self._flame_alarm.start()
+        self._update_alarm_button()
 
     def _apply_settings_to_widgets(self) -> None:
         """Синхронизация виджетов с актуальными настройками."""
@@ -314,6 +353,13 @@ class MainWindow(QMainWindow):
         self._apply_settings_to_widgets()
         self._install_hotkey()
         self._reconfigure_flame_detector()
+        self._reconfigure_flame_alarm()
+        # Синхронизация кнопки тревоги с возможно изменённой настройкой без
+        # повторного применения (blockSignals -> toggled-слот не сработает).
+        self._alarm_toggle_button.blockSignals(True)
+        self._alarm_toggle_button.setChecked(self._settings.alarm_enabled)
+        self._alarm_toggle_button.blockSignals(False)
+        self._update_alarm_button()
         if self._capture is not None:
             self._capture.set_mirror(self._settings.camera_mirror)
         self._apply_recording_mode()
@@ -451,6 +497,12 @@ class MainWindow(QMainWindow):
         )
         if state != previous:
             self._flame_indicator.set_state(state)
+            # Звуковая тревога: старт только при погасшем пламени и включённой
+            # тревоге, иначе (горит/неизвестно/тревога выключена) — стоп.
+            if state is FlameState.EXTINGUISHED and self._settings.alarm_enabled:
+                self._flame_alarm.start()
+            else:
+                self._flame_alarm.stop()
 
     def _reconfigure_flame_detector(self) -> None:
         """Пересоздание детектора горения и троттла из текущих настроек.
@@ -467,6 +519,24 @@ class MainWindow(QMainWindow):
         )
         self._infer_interval = 1.0 / max(MIN_FLAME_INFER_HZ, self._settings.flame_infer_hz)
         self._flame_indicator.set_state(FlameState.UNKNOWN)
+
+    def _reconfigure_flame_alarm(self) -> None:
+        """Переконфигурация звуковой тревоги из текущих настроек.
+
+        Применяет актуальные параметры AppSettings (звук, громкость, интервал
+        повтора, эскалацию) к тревоге без перезапуска приложения. Если тревога
+        выключена в настройках, она принудительно останавливается. Вызывается при
+        инициализации окна и после сохранения настроек в диалоге.
+        """
+        self._flame_alarm.configure(
+            sound_file=self._settings.alarm_sound_file,
+            volume=self._settings.alarm_volume,
+            heartbeat_interval=self._settings.alarm_heartbeat_s,
+            escalate=self._settings.alarm_escalate,
+            escalate_seconds=self._settings.alarm_escalate_s,
+        )
+        if not self._settings.alarm_enabled:
+            self._flame_alarm.stop()
 
     def _open_calibration(self) -> None:
         """Открытие модального диалога калибровки порогов CV-детектора горения.
@@ -518,6 +588,7 @@ class MainWindow(QMainWindow):
             pass
         self._camera_panel.set_capture(None)
         self._flame_detector.reset()
+        self._flame_alarm.stop()
         self._flame_indicator.set_state(FlameState.UNKNOWN)
         self._brightness_label.setText("Яркость: —")
         self._calibrate_button.setEnabled(False)

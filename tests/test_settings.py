@@ -9,6 +9,12 @@ from PyQt6.QtCore import QSettings
 
 from plasma_dog.const import (
     APP_NAME,
+    DEFAULT_ALARM_ENABLED,
+    DEFAULT_ALARM_ESCALATE,
+    DEFAULT_ALARM_ESCALATE_SECONDS,
+    DEFAULT_ALARM_HEARTBEAT_S,
+    DEFAULT_ALARM_SOUND_FILE,
+    DEFAULT_ALARM_VOLUME,
     DEFAULT_CAMERA_MIRROR,
     DEFAULT_FPS,
     DEFAULT_HOTKEY,
@@ -188,12 +194,12 @@ def test_settings_camera_mirror_round_trip(qapp) -> None:  # type: ignore[no-unt
     assert AppSettings().camera_mirror is True
 
 
-def test_settings_recording_mode_default_is_true(qapp) -> None:  # type: ignore[no-untyped-def]
-    """До любых записей recording_mode_enabled возвращает DEFAULT_RECORDING_MODE (True)."""
+def test_settings_recording_mode_default_is_false(qapp) -> None:  # type: ignore[no-untyped-def]
+    """До любых записей recording_mode_enabled возвращает DEFAULT_RECORDING_MODE (False)."""
     del qapp
     settings = AppSettings()
     assert settings.recording_mode_enabled is DEFAULT_RECORDING_MODE
-    assert settings.recording_mode_enabled is True
+    assert settings.recording_mode_enabled is False
 
 
 def test_settings_recording_mode_round_trip(qapp) -> None:  # type: ignore[no-untyped-def]
@@ -204,3 +210,35 @@ def test_settings_recording_mode_round_trip(qapp) -> None:  # type: ignore[no-un
     assert AppSettings().recording_mode_enabled is False
     writer.recording_mode_enabled = True
     assert AppSettings().recording_mode_enabled is True
+
+
+def test_settings_alarm_defaults(qapp) -> None:  # type: ignore[no-untyped-def]
+    """До любых записей alarm-настройки возвращают дефолты из const.py."""
+    del qapp
+    settings = AppSettings()
+    assert settings.alarm_enabled is DEFAULT_ALARM_ENABLED
+    assert settings.alarm_sound_file == DEFAULT_ALARM_SOUND_FILE
+    assert settings.alarm_volume == pytest.approx(DEFAULT_ALARM_VOLUME)
+    assert settings.alarm_heartbeat_s == pytest.approx(DEFAULT_ALARM_HEARTBEAT_S)
+    assert settings.alarm_escalate is DEFAULT_ALARM_ESCALATE
+    assert settings.alarm_escalate_s == pytest.approx(DEFAULT_ALARM_ESCALATE_SECONDS)
+
+
+def test_settings_alarm_round_trip(qapp) -> None:  # type: ignore[no-untyped-def]
+    """Установленные alarm-настройки возвращаются новым экземпляром AppSettings."""
+    del qapp
+    writer = AppSettings()
+    writer.alarm_enabled = False
+    writer.alarm_sound_file = "/tmp/custom_alarm.wav"
+    writer.alarm_volume = 0.42
+    writer.alarm_heartbeat_s = 3.5
+    writer.alarm_escalate = False
+    writer.alarm_escalate_s = 45.0
+
+    reader = AppSettings()
+    assert reader.alarm_enabled is False
+    assert reader.alarm_sound_file == "/tmp/custom_alarm.wav"
+    assert reader.alarm_volume == pytest.approx(0.42)
+    assert reader.alarm_heartbeat_s == pytest.approx(3.5)
+    assert reader.alarm_escalate is False
+    assert reader.alarm_escalate_s == pytest.approx(45.0)
